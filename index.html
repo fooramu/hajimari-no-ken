@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>はじまりの剣</title>
+<style>
+  html,body{margin:0;padding:0;background:#0c0c14;color:#eee;font-family:'Hiragino Kaku Gothic ProN',sans-serif;}
+  #wrap{display:flex;flex-direction:column;align-items:center;padding:12px;}
+  canvas{image-rendering:pixelated;max-width:100%;height:auto;border:4px solid #333;border-radius:4px;}
+  #help{margin-top:10px;font-size:13px;color:#aaa;line-height:1.8;text-align:center;}
+  #help b{color:#ffd860;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="720"></canvas>
+  <div id="help">
+    <b>矢印 / WASD</b> いどう ｜ <b>Z / Enter / Space</b> けってい・はなす ｜
+    <b>X / Esc</b> メニュー・キャンセル ｜ <b>M</b> BGM<br>
+    町の南から ワールドマップへ。モンスターを たおして レベルを あげよう。宿屋で 回復＆セーブ。
+  </div>
+</div>
+<script>
+"use strict";
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const T = 48;
+const U = T / 16;
+let tick = 0;
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+/* ================= 入力 ================= */
+const keys = {};
+const justPressed = new Set();
+const DIR_KEYS = {
+  up:['ArrowUp','KeyW'], down:['ArrowDown','KeyS'],
+  left:['ArrowLeft','KeyA'], right:['ArrowRight','KeyD'],
+};
+const CONFIRM = ['KeyZ','Enter','Space'];
+const CANCEL  = ['KeyX','Escape'];
+
+addEventListener('keydown', e => {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  initAudio();
+  if (!e.repeat) justPressed.add(e.code);
+  keys[e.code] = true;
+  if (e.code === 'KeyM' && !e.repeat) toggleBgm();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+const heldDir = () => {
+  for (const d of ['up','down','left','right'])
+    if (DIR_KEYS[d].some(k => keys[k])) return d;
+  return null;
+};
+const pressed = codes => codes.some(c => justPressed.has(c));
+const pUp = () => pressed(['ArrowUp','KeyW']);
+const pDown = () => pressed(['ArrowDown','KeyS']);
+
+/* ================= サウンド ================= */
+let audio = null, bgmOn = true, bgmTimer = null, curTrack = null;
+function initAudio() {
+  if (audio) return;
+  audio = new (window.AudioContext || window.webkitAudioContext)();
+  if (curTrack) playTrack(curTrack);
+}
+function tone(freq, at, dur, type = 'square', vol = 0.05) {
+  if (!audio || freq <= 0) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, at);
+  g.gain.exponentialRampToValueAtTime(0.001, at + dur);
+  o.connect(g).connect(audio.destination);
+  o.start(at); o.stop(at + dur);
+}
+function sfx(freq, dur = 0.08, type = 'square', vol = 0.08) {
+  if (!audio) return;
+  tone(freq, audio.currentTime, dur, type, vol);
+}
+function sweep(f1, f2, dur, type = 'sawtooth', vol = 0.09) {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f1, audio.currentTime);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), audio.currentTime + dur);
+  g.gain.setValueAtTime(vol, audio.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + dur);
+  o.connect(g).connect(audio.destination);
+  o.start(); o.stop(audio.currentTime + dur);
+}
+const seConfirm = () => sfx(880, .07);
+const seCursor  = () => sfx(660, .04);
+const seCancel  = () => sfx(440, .07);
+const seBump    = () => sfx(90, .06, 'sawtooth', .06);
+const seWarp    = () => { sfx(520, .1); setTimeout(() => sfx(780, .1), 80); };
+const seBuy     = () => { sfx(660, .09); setTimeout(() => sfx(990, .12), 90); };
+const seHit     = () => sweep(300, 70, .15);
+const seDamage  = () => sweep(160, 40, .22);
+const seHeal    = () => { sfx(700, .08, 'triangle', .1); setTimeout(() => sfx(1050, .14, 'triangle', .1), 90); };
+const seSpark   = () => sweep(1400, 200, .3, 'sawtooth', .07);
+const seEncount = () => sweep(70, 220, .3, 'square', .08);
+const seLevelUp = () => { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>sfx(f,.12,'square',.09),i*100)); };
+const seVictory = () => { [784,784,784,1047].forEach((f,i)=>setTimeout(()=>sfx(f,.1,'square',.08),i*90)); };
+const seSave    = () => { [660,880,1320].forEach((f,i)=>setTimeout(()=>sfx(f,.1,'triangle',.1),i*110)); };
+
+function nf(n) {
+  const m = /^([A-G])(#?)(\d)$/.exec(n);
+  const semi = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]] + (m[2] ? 1 : 0);
+  return 440 * Math.pow(2, (semi - 9) / 12 + (+m[3] - 4));
+}
+const TRACKS = {
+  town: { beat:.26,
+    mel:[['C5',1],['E5',1],['G5',1],['E5',1],['F5',1],['A5',1],['C6',2],['G5',1],['E5',1],['F5',1],['D5',1],['E5',2],['C5',1],['D5',1],['E5',1],['G5',1],['E5',1],['D5',1],['C5',3],[null,1]],
+    bas:[['C3',2],['G3',2],['F3',2],['A3',2],['C3',2],['G3',2],['F3',2],['G3',2]] },
+  field: { beat:.23,
+    mel:[['A4',1],['C5',1],['E5',1],['A5',2],['G5',1],['E5',1],['F5',2],['E5',1],['D5',1],['C5',2],['B4',1],['C5',1],['D5',2],['E5',1],['C5',1],['B4',2],['C5',1],['B4',1],['A4',4]],
+    bas:[['A2',2],['E3',2],['F2',2],['C3',2],['G2',2],['D3',2],['E2',2],['E3',2]] },
+  battle: { beat:.15,
+    mel:[['A4',1],['A4',1],['C5',1],['A4',1],['D5',1],['C5',1],['B4',1],['B4',1],['G4',1],['G4',1],['B4',1],['G4',1],['C5',1],['B4',1],['A4',1],['E4',1]],
+    bas:[['A2',1],['A2',1],['G2',1],['G2',1]] },
+  title: { beat:.38,
+    mel:[['C4',1],['G4',1],['C5',1],['E5',1],['G5',3],['F5',1],['E5',2],['D5',2],['E5',1],['C5',3],[null,2]],
+    bas:[['C3',2],['G2',2],['F2',2],['G2',2]] },
+};
+function playTrack(name) {
+  curTrack = name;
+  clearTimeout(bgmTimer); bgmTimer = null;
+  if (!audio || !bgmOn) return;
+  const tr = TRACKS[name];
+  const t0 = audio.currentTime + 0.05;
+  let total = 0;
+  for (const [, b] of tr.mel) total += b * tr.beat;
+  let t = t0;
+  for (const [n, b] of tr.mel) {
+    if (n) tone(nf(n), t, b * tr.beat * 0.92, 'square', 0.035);
+    t += b * tr.beat;
+  }
+  t = t0; let i = 0;
+  while (t < t0 + total - 0.01) {
+    const [n, b] = tr.bas[i % tr.bas.length];
+    const d = Math.min(b * tr.beat, t0 + total - t);
+    if (n) tone(nf(n), t, d * 0.9, 'triangle', 0.06);
+    t += d; i++;
+  }
+  bgmTimer = setTimeout(() => playTrack(name), total * 1000 - 30);
+}
+function setTrack(name) { if (curTrack !== name) playTrack(name); }
+function toggleBgm() {
+  bgmOn = !bgmOn;
+  if (bgmOn) playTrack(curTrack || 'title');
+  else { clearTimeout(bgmTimer); bgmTimer = null; }
+}
+/* ================= ドット絵 ================= */
+function drawArt(art, x, y, s) {
+  for (let r = 0; r < art.rows.length; r++) {
+    const row = art.rows[r];
+    for (let c = 0; c < row.length; c++) {
+      const col = art.pal[row[c]];
+      if (!col) continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(x + c * s, y + r * s, s, s);
+    }
+  }
+}
+const ART = {
+  slime: { pal:{K:'#182850',B:'#3a7cf0',L:'#9cc4ff',D:'#2456b8',W:'#ffffff'}, rows:[
+    "................",
+    "......KKKK......",
+    "....KKBLLBKK....",
+    "...KBLLBBBBBK...",
+    "..KBLBBBBBBBBK..",
+    ".KBBWWKBBKWWBBK.",
+    ".KBBWWKBBKWWBBK.",
+    ".KBBBBBBBBBBBBK.",
+    ".KBBKBBBBBBKBBK.",
+    ".KBBBKKKKKKBBBK.",
+    ".KDBBBBBBBBBBDK.",
+    "..KDBBBBBBBBDK..",
+    "..KKDDBBBBDDKK..",
+    "....KKDDDDKK....",
+    "......KKKK......",
+    "................"]},
+  bat: { pal:{K:'#241430',B:'#6a3a9c',W:'#ffffff',P:'#180828',M:'#ffffff',D:'#4a2870'}, rows:[
+    "................",
+    ".K............K.",
+    "KBK..........KBK",
+    "KBBK..KKKK..KBBK",
+    "KBBBKKBBBBKKBBBK",
+    "KBBBBWPBBPWBBBBK",
+    "KBBBBBBBBBBBBBBK",
+    ".KBDBBKMMKBBDBK.",
+    ".KBDKBBBBBBKDBK.",
+    "..K.KBBBBBBK.K..",
+    ".....KBKKBK.....",
+    ".....K..K..K....",
+    "................",
+    "................",
+    "................",
+    "................"]},
+  skel: { pal:{K:'#202020',W:'#e8e8d8'}, rows:[
+    "................",
+    ".....KKKKKK.....",
+    "....KWWWWWWK....",
+    "...KWWWWWWWWK...",
+    "...KWKKWWKKWK...",
+    "...KWKKWWKKWK...",
+    "...KWWWKKWWWK...",
+    "....KWKWWKWK....",
+    ".....KKKKKK.....",
+    "..KKKWWWWWWKKK..",
+    "..KW.KWWWWK.WK..",
+    "..KW.KWKKWK.WK..",
+    "..KK.KWWWWK.KK..",
+    ".....KKWWKK.....",
+    ".....KW..WK.....",
+    "....KKW..WKK...."]},
+  mage: { pal:{K:'#1a1030',H:'#5038b8',S:'#100818',Y:'#ffd840',R:'#7a50d0',D:'#5838a8'}, rows:[
+    "................",
+    ".......KK.......",
+    "......KHHK......",
+    ".....KHHHHK.....",
+    "....KHHHHHHK....",
+    "..KKHHHHHHHHKK..",
+    ".KHHHHHHHHHHHHK.",
+    "..KKSSSSSSSSKK..",
+    "...KSYSSSSYSK...",
+    "...KSSSSSSSSK...",
+    "..KRRRRRRRRRRK..",
+    ".KRRRRRRRRRRRRK.",
+    ".KRDRRRRRRRRDRK.",
+    ".KRDRRRRRRRRDRK.",
+    ".KRRRRRRRRRRRRK.",
+    ".KKKKKKKKKKKKKK."]},
+  drag: { pal:{K:'#103818',G:'#38a04c',L:'#b8e088',V:'#268040',W:'#ffffff',P:'#102018'}, rows:[
+    "................",
+    "....KK....KK....",
+    "...KGGK..KGGK...",
+    "...KGGGKKGGGK...",
+    "..KGGGGGGGGGGK..",
+    ".KGGWPGGGGWPGGK.",
+    ".KGGGGGGGGGGGGK.",
+    ".KGGKWWWWWWKGGK.",
+    ".KGGGKKKKKKGGGK.",
+    ".KGGLLLLLLLLGGK.",
+    "KVGGLLLLLLLLGGVK",
+    "KVVGLLLLLLLLGVVK",
+    ".KGGLLLLLLLLGGK.",
+    ".KGGGLLLLLLGGGK.",
+    "..KGGK....KGGK..",
+    "..KKKK....KKKK.."]},
+  sword: { pal:{K:'#222',W:'#e8eef8',L:'#aab4c8',G:'#c8a030',B:'#7a4a20'}, rows:[
+    ".......KK.......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "......KWLK......",
+    "....KKKWLKKK....",
+    "...KGGGGGGGGK...",
+    "....KKKBBKKK....",
+    "......KBBK......",
+    "......KBBK......",
+    ".....KGGGGK.....",
+    "......KKKK......"]},
+};
+/* ================= タイル描画 ================= */
+function rnd(x, y, s) {
+  let h = (x * 374761393 + y * 668265263 + s * 1274126177) >>> 0;
+  h = (h ^ (h >> 13)) * 1274126177 >>> 0;
+  return (h >>> 8) / 16777216;
+}
+function drawTile(ch, px, py, gx, gy) {
+  const r = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(px + x * U, py + y * U, w * U, h * U); };
+  const nb = d => tileAt(mapId, gx + (d === 'l' ? -1 : d === 'r' ? 1 : 0), gy + (d === 'u' ? -1 : d === 'd' ? 1 : 0));
+  const grass = () => {
+    r(0, 0, 16, 16, '#54a23a');
+    if ((gx + gy) % 2 === 0) r(0, 0, 16, 16, 'rgba(255,255,255,0.025)');
+    for (let i = 0; i < 4; i++) {
+      const sx = Math.floor(rnd(gx, gy, i) * 14), sy = Math.floor(rnd(gx, gy, i + 9) * 14);
+      r(sx, sy, 1, 2, '#478c30'); r(sx + 1, sy + 1, 1, 1, '#478c30');
+    }
+    if (rnd(gx, gy, 31) > 0.92) { r(7, 7, 1, 1, '#e8e060'); r(6, 8, 1, 1, '#e8e060'); }
+  };
+  switch (ch) {
+    case 'G': grass(); break;
+    case 'F': {
+      grass();
+      const tree = (ox, oy, c1, c2) => {
+        r(ox + 2, oy + 9, 2, 4, '#6a4018');
+        r(ox, oy + 2, 6, 7, c1); r(ox + 1, oy, 4, 3, c1);
+        r(ox + 1, oy + 1, 2, 2, c2); r(ox + 3, oy + 4, 2, 2, c2);
+      };
+      tree(8, 1, '#1e6020', '#2e7830');
+      tree(1, 5, '#2a7028', '#3c8c34');
+      break;
+    }
+    case 'T': {
+      grass();
+      r(6, 10, 4, 5, '#6a4018'); r(7, 10, 1, 5, '#8a5c2c');
+      r(2, 1, 12, 9, '#236a24'); r(4, 0, 8, 2, '#236a24'); r(1, 3, 14, 5, '#236a24');
+      r(4, 1, 5, 2, '#359038'); r(10, 3, 3, 2, '#359038'); r(2, 4, 3, 2, '#359038');
+      r(3, 7, 4, 2, '#174f18'); r(9, 6, 4, 3, '#174f18');
+      break;
+    }
+    case 'M': {
+      grass();
+      for (let i = 0; i < 12; i++) {
+        const w = 3 + i;
+        const x0 = 8 - w / 2;
+        let c = i < 3 ? '#eef0f6' : (i % 2 ? '#8e8e9a' : '#7e7e8a');
+        r(x0, 2 + i, w, 1, c);
+        if (i >= 3) r(x0 + w - 2, 2 + i, 2, 1, '#62626e');
+      }
+      r(2, 14, 13, 1, '#56566a');
+      break;
+    }
+    case 'A': {
+      grass();
+      r(1, 4, 8, 3, '#c0392a'); r(2, 3, 6, 1, '#d8553a');
+      r(2, 7, 6, 4, '#efe6cc'); r(4, 8, 2, 3, '#6a4018');
+      r(8, 6, 7, 3, '#2858c0'); r(9, 5, 5, 1, '#4a78e0');
+      r(9, 9, 5, 4, '#efe6cc'); r(11, 10, 2, 3, '#6a4018');
+      r(1, 13, 14, 1, '#8a6038');
+      break;
+    }
+    case 'P': {
+      r(0, 0, 16, 16, '#d9c28c');
+      for (let i = 0; i < 4; i++) {
+        const sx = Math.floor(rnd(gx, gy, i + 3) * 14), sy = Math.floor(rnd(gx, gy, i + 7) * 14);
+        r(sx, sy, 2, 1, '#c6ab70');
+      }
+      const isP = c => c === 'P' || c === 'D' || c === 'A';
+      if (!isP(nb('u'))) r(0, 0, 16, 1, '#b89a64');
+      if (!isP(nb('d'))) r(0, 15, 16, 1, '#b89a64');
+      if (!isP(nb('l'))) r(0, 0, 1, 16, '#b89a64');
+      if (!isP(nb('r'))) r(15, 0, 1, 16, '#b89a64');
+      break;
+    }
+    case 'W': {
+      r(0, 0, 16, 16, '#2a6cd4');
+      const ph = Math.floor(tick / 22 + gx * 3 + gy * 5) % 3;
+      r(2, 3 + ph, 5, 1, '#5e96e8'); r(9, 9 - ph, 5, 1, '#5e96e8');
+      r(5, 12 + (ph % 2), 4, 1, '#4a84dc'); r(11, 1 + ph, 3, 1, '#4a84dc');
+      const land = c => c !== 'W';
+      if (land(nb('u'))) r(0, 0, 16, 2, '#8ec0f0');
+      if (land(nb('d'))) r(0, 14, 16, 2, '#1e54ac');
+      if (land(nb('l'))) r(0, 0, 2, 16, '#6aa4e8');
+      if (land(nb('r'))) r(14, 0, 2, 16, '#6aa4e8');
+      break;
+    }
+    case 'R': case 'Y': case 'V': {
+      const c = ch === 'R' ? { a:'#c84432', b:'#a32f1c', hi:'#e8745c', ln:'#8c2614' }
+        : ch === 'Y' ? { a:'#3a9048', b:'#2a7034', hi:'#62b86c', ln:'#1f5c28' }
+        : { a:'#3a62c8', b:'#2a4aa8', hi:'#6488e0', ln:'#1f3a88' };
+      r(0, 0, 16, 16, c.a);
+      for (let i = 0; i < 4; i++) {
+        r(0, i * 4 + 3, 16, 1, c.ln);
+        const off = (i % 2) * 4 + (gx % 2) * 2;
+        for (let j = -1; j < 3; j++) r(((j * 8 + off) % 24 + 24) % 24 - 4, i * 4, 1, 3, c.b);
+      }
+      if (tileAt(mapId, gx, gy - 1) !== ch) { r(0, 0, 16, 1, '#f8f0e0'); r(0, 1, 16, 1, c.hi); }
+      if (tileAt(mapId, gx, gy + 1) !== ch) r(0, 14, 16, 2, c.ln);
+      break;
+    }
+    case 'B': case 'D': {
+      r(0, 0, 16, 16, '#f0e6cc');
+      r(0, 0, 16, 2, '#c4a880');
+      r(0, 0, 1, 16, '#8a6038'); r(15, 0, 1, 16, '#8a6038');
+      r(0, 13, 16, 1, '#d8c8a8');
+      r(0, 14, 16, 2, '#8a6038');
+      if (ch === 'D') {
+        r(4, 3, 8, 13, '#4a2c10');
+        r(5, 4, 6, 12, '#7a4a20');
+        r(6, 4, 1, 12, '#5a3414'); r(9, 4, 1, 12, '#5a3414');
+        r(5, 4, 6, 1, '#9a6630');
+        r(10, 9, 1, 2, '#f0d030');
+      } else if (rnd(gx, gy, 21) > 0.55) {
+        r(5, 4, 6, 6, '#6a4018');
+        r(6, 5, 4, 4, '#88c4e8'); r(6, 5, 4, 1, '#c8e8f8');
+        r(7, 5, 1, 4, '#6a4018'); r(6, 7, 4, 1, '#6a4018');
+        r(4, 10, 8, 1, '#b08850');
+      }
+      break;
+    }
+    case '#': {
+      r(0, 0, 16, 16, '#8a8298');
+      r(0, 5, 16, 1, '#665e76'); r(0, 11, 16, 1, '#665e76');
+      r(5, 0, 1, 5, '#665e76'); r(10, 6, 1, 5, '#665e76'); r(4, 12, 1, 4, '#665e76');
+      r(1, 1, 3, 1, '#a8a0b8'); r(7, 7, 2, 1, '#a8a0b8'); r(11, 13, 3, 1, '#a8a0b8');
+      break;
+    }
+    case '.': {
+      r(0, 0, 16, 16, '#b08850');
+      r(0, 7, 16, 1, '#94703a'); r(0, 15, 16, 1, '#94703a');
+      const off = (gx % 2) * 8;
+      r((4 + off) % 16, 0, 1, 7, '#94703a'); r((12 + off) % 16, 8, 1, 7, '#94703a');
+      r(1, 1, 5, 1, '#c49c60'); r(9, 9, 5, 1, '#c49c60');
+      break;
+    }
+    case 'C': {
+      drawTile('.', px, py, gx, gy);
+      r(0, 2, 16, 7, '#e0c088'); r(0, 2, 16, 1, '#f4dcaa');
+      r(0, 9, 16, 5, '#a87838'); r(0, 9, 16, 1, '#8a5c24');
+      r(2, 10, 2, 3, '#8a5c24'); r(12, 10, 2, 3, '#8a5c24');
+      break;
+    }
+    case 'S': {
+      drawTile('.', px, py, gx, gy);
+      r(1, 0, 14, 13, '#8a5c2c'); r(2, 1, 12, 11, '#6a4018');
+      r(2, 5, 12, 1, '#8a5c2c'); r(2, 11, 12, 1, '#8a5c2c');
+      r(3, 2, 2, 3, '#d04040'); r(7, 2, 2, 3, '#4060d0'); r(11, 2, 2, 3, '#40b050');
+      r(4, 7, 2, 4, '#c0c8d8'); r(8, 8, 3, 3, '#c8a030');
+      break;
+    }
+    case 'O': {
+      drawTile('.', px, py, gx, gy);
+      r(3, 2, 10, 13, '#8a5c2c');
+      r(2, 4, 12, 9, '#9a6c38');
+      r(2, 5, 12, 1, '#5a3414'); r(2, 11, 12, 1, '#5a3414');
+      r(4, 2, 8, 1, '#6a4018');
+      r(4, 6, 2, 4, '#b8884c');
+      break;
+    }
+    case 'E': {
+      drawTile('.', px, py, gx, gy);
+      r(1, 2, 14, 14, '#8a5c2c');
+      r(2, 0, 12, 4, '#6a4018');
+      r(2, 4, 12, 5, '#f0f0f0'); r(3, 5, 10, 2, '#d8d8e0');
+      r(2, 9, 12, 7, '#c03838');
+      break;
+    }
+    case 'e': {
+      drawTile('.', px, py, gx, gy);
+      r(1, 0, 14, 13, '#8a5c2c');
+      r(2, 0, 12, 11, '#c03838');
+      r(2, 2, 12, 1, '#a02828'); r(2, 6, 12, 1, '#a02828');
+      r(2, 11, 12, 2, '#6a4018');
+      break;
+    }
+  }
+}
+/* ================= マップ ================= */
+function genWorld() {
+  const W = 40, H = 30, rows = [];
+  const fc = [[8,5],[31,5],[7,21],[33,22],[14,25],[27,15]];
+  const mc = [[9,11],[33,10],[25,26],[5,15]];
+  for (let y = 0; y < H; y++) {
+    let s = '';
+    for (let x = 0; x < W; x++) {
+      let ch = 'G';
+      const ed = Math.min(x, W - 1 - x, y * 1.4, (H - 1 - y) * 1.4);
+      if (ed < 1.6 + rnd(x, y, 7) * 2.2) ch = 'W';
+      else {
+        for (const [cx, cy] of mc)
+          if (Math.hypot(x - cx, y - cy) < 2.2 + rnd(x, y, 11) * 1.6) ch = 'M';
+        if (ch === 'G')
+          for (const [cx, cy] of fc)
+            if (Math.hypot(x - cx, y - cy) < 3.0 + rnd(x, y, 13) * 2.0) ch = 'F';
+      }
+      if (Math.abs(x - 20) <= 2 && Math.abs(y - 8) <= 2) ch = 'G';
+      s += ch;
+    }
+    rows.push(s);
+  }
+  rows[8] = rows[8].slice(0, 20) + 'A' + rows[8].slice(21);
+  return rows;
+}
+
+const MAPS = {
+  town: {
+    grid: [
+      "TTTTTTTTTTTTTTTTTTTT",
+      "TGGGGGGGGGGGGGGGGGGT",
+      "TGRRRRRGYYYYGVVVVVGT",
+      "TGRRRRRGYYYYGVVVVVGT",
+      "TGBBDBBGBBDBGBBDBBGT",
+      "TGGGPGGGGGPGGGGPGGGT",
+      "TGGGPPPPPPPPPPPPGGGT",
+      "TGGGGGGGGPPGGGGGGGGT",
+      "TGFFGGGGGPPGGGFFGGGT",
+      "TGFFGGGGGPPGGWWWWGGT",
+      "TGGGGGGGGPPGGWWWWGGT",
+      "TGGGGGGGGPPGGWWWWGGT",
+      "TGGGGGGGGPPGGGGGGGGT",
+      "TGGGGGGGGPPGGGGGGGGT",
+      "TTTTTTTTTPPTTTTTTTTT",
+    ],
+    track: 'town',
+    warps: {
+      "4,4":  { map:'weapon', x:4, y:5, dir:'up' },
+      "10,4": { map:'inn',    x:4, y:5, dir:'up' },
+      "15,4": { map:'item',   x:4, y:5, dir:'up' },
+      "9,14":  { map:'world', x:20, y:9, dir:'down' },
+      "10,14": { map:'world', x:20, y:9, dir:'down' },
+    },
+    npcs: [
+      { tx:12, ty:7, dir:'down', wander:true,
+        pal:{hair:'#604020',skin:'#f0c890',cloth:'#3a9048',legs:'#604020'},
+        lines:["ここは はじまりの まち アルファ。",
+               "ひだりから ぶきや・やどや・どうぐやだ。\nそなえは だいじだぞ！",
+               "まちの みなみから そとに でられるが…\nまものに きを つけるんだな。"] },
+      { tx:13, ty:12, dir:'up', wander:true,
+        pal:{hair:'#803818',skin:'#f0c890',cloth:'#d06890',legs:'#803030'},
+        lines:["やどやに とまると ＨＰと ＭＰが\nぜんかいふく するのよ。",
+               "それに ぼうけんのしょにも\nきろく してくれるんですって。"] },
+      { tx:7, ty:13, dir:'right', wander:false,
+        pal:{hair:'#383838',skin:'#e8b878',cloth:'#888898',legs:'#505058'},
+        lines:["この さきは ワールドマップだ。",
+               "とおくへ いくほど つよい まものが でる。\nまずは まちの ちかくで レベルあげだ。",
+               "しんでも ゴールドが はんぶんに なるだけだ。\nきがるに いってこい！"] },
+    ],
+  },
+  weapon: {
+    grid: [
+      "#########",
+      "#S.....S#",
+      "#..CCC..#",
+      "#.......#",
+      "#O.....O#",
+      "#.......#",
+      "####D####",
+    ],
+    track: 'town',
+    warps: { "4,6": { map:'town', x:4, y:5, dir:'down' } },
+    npcs: [
+      { tx:4, ty:1, dir:'down',
+        pal:{hair:'#303030',skin:'#e8b878',cloth:'#8a4a20',legs:'#503018'},
+        greet:"いらっしゃい！ ここは ぶきやだ。\nなにを かっていくかい？",
+        bye:"また きてくれよな！",
+        goods:[
+          { name:"ひのきのぼう", price:10 },
+          { name:"こんぼう",     price:60 },
+          { name:"どうのつるぎ", price:180 },
+          { name:"たびのふく",   price:70 },
+          { name:"かわのたて",   price:90 },
+        ] },
+    ],
+  },
+  inn: {
+    grid: [
+      "#########",
+      "#.......#",
+      "#..CCC..#",
+      "#.......#",
+      "#E.....E#",
+      "#e.....e#",
+      "####D####",
+    ],
+    track: 'town',
+    warps: { "4,6": { map:'town', x:10, y:5, dir:'down' } },
+    npcs: [
+      { tx:4, ty:1, dir:'down', service:'inn',
+        pal:{hair:'#a06820',skin:'#f0c890',cloth:'#c09838',legs:'#705020'} },
+    ],
+  },
+  item: {
+    grid: [
+      "#########",
+      "#S.....S#",
+      "#..CCC..#",
+      "#.......#",
+      "#O.....O#",
+      "#.......#",
+      "####D####",
+    ],
+    track: 'town',
+    warps: { "4,6": { map:'town', x:15, y:5, dir:'down' } },
+    npcs: [
+      { tx:4, ty:1, dir:'down',
+        pal:{hair:'#a06820',skin:'#f0c890',cloth:'#208888',legs:'#185858'},
+        greet:"いらっしゃいませ。どうぐやです。\nなにを おもとめですか？",
+        bye:"ありがとう ございました！",
+        goods:[
+          { name:"やくそう",       price:8 },
+          { name:"どくけしそう",   price:10 },
+          { name:"せいすい",       price:20 },
+          { name:"キメラのつばさ", price:25 },
+        ] },
+    ],
+  },
+  world: {
+    grid: genWorld(),
+    track: 'field',
+    warps: { "20,8": { map:'town', x:9, y:13, dir:'up' } },
+    npcs: [],
+  },
+};
+
+let mapId = 'town';
+let map = MAPS[mapId];
+
+const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e']);
+const tileAt = (m, x, y) => {
+  const g = MAPS[m].grid;
+  if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return 'T';
+  return g[y][x];
+};
+function entityAt(x, y) {
+  for (const n of map.npcs) if (n.tx === x && n.ty === y) return n;
+  return null;
+}
+function isFree(x, y, forNpc) {
+  if (SOLID.has(tileAt(mapId, x, y))) return false;
+  if (entityAt(x, y)) return false;
+  if (forNpc) {
+    const ch = tileAt(mapId, x, y);
+    if (ch === 'D' || ch === 'A') return false;
+    if (map.warps && map.warps[x + ',' + y]) return false;
+    if (player.tx === x && player.ty === y) return false;
+  }
+  return true;
+}
+const DXY = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+const facingBack = d => ({up:'down',down:'up',left:'right',right:'left'}[d]);
+/* ================= 勇者・アイテム・敵 ================= */
+const LVT = [null,
+  {exp:0,    hp:16, mp:0,  str:4,  agi:4},
+  {exp:7,    hp:22, mp:0,  str:5,  agi:4},
+  {exp:23,   hp:24, mp:5,  str:7,  agi:6},
+  {exp:47,   hp:31, mp:16, str:7,  agi:8},
+  {exp:110,  hp:35, mp:20, str:12, agi:10},
+  {exp:220,  hp:38, mp:24, str:16, agi:10},
+  {exp:450,  hp:40, mp:26, str:18, agi:17},
+  {exp:800,  hp:46, mp:29, str:22, agi:20},
+  {exp:1300, hp:50, mp:36, str:30, agi:22},
+  {exp:2000, hp:54, mp:40, str:35, agi:31},
+];
+const MAXLV = 10;
+const WEAPONS = { "ひのきのぼう":{atk:2}, "こんぼう":{atk:4}, "どうのつるぎ":{atk:10} };
+const ARMORS  = { "たびのふく":{def:4} };
+const SHIELDS = { "かわのたて":{def:4} };
+const ITEMS   = { "やくそう":{use:'heal'}, "どくけしそう":{use:'none'}, "せいすい":{use:'none'}, "キメラのつばさ":{use:'wing'} };
+const SPELLS  = { "ヒール":{mp:4, lv:3, field:true}, "スパーク":{mp:5, lv:4, field:false} };
+const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? 'shield' : null;
+
+const hero = {
+  name:'ゆうしゃ', lv:1, exp:0, hp:16, mp:0, gold:120,
+  weapon:null, armor:null, shield:null, inv:{},
+  pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
+};
+const maxHp = () => LVT[hero.lv].hp;
+const maxMp = () => LVT[hero.lv].mp;
+const atk = () => LVT[hero.lv].str + (hero.weapon ? WEAPONS[hero.weapon].atk : 0);
+const dfn = () => Math.floor(LVT[hero.lv].agi / 2)
+  + (hero.armor ? ARMORS[hero.armor].def : 0) + (hero.shield ? SHIELDS[hero.shield].def : 0);
+const learnedSpells = () => Object.keys(SPELLS).filter(s => hero.lv >= SPELLS[s].lv);
+const addInv = n => { hero.inv[n] = (hero.inv[n] || 0) + 1; };
+const decInv = n => { hero.inv[n]--; if (hero.inv[n] <= 0) delete hero.inv[n]; };
+function equip(n) {
+  const s = slotOf(n);
+  if (!s) return false;
+  decInv(n);
+  if (hero[s]) addInv(hero[s]);
+  hero[s] = n;
+  return true;
+}
+
+const ENEMIES = {
+  'スライム':       { hp:9,  atk:6,  def:3,  agi:3,  exp:2,  gold:4,  art:'slime' },
+  'おおコウモリ':   { hp:12, atk:9,  def:5,  agi:9,  exp:4,  gold:8,  art:'bat' },
+  'がいこつ':       { hp:18, atk:13, def:9,  agi:8,  exp:8,  gold:16, art:'skel' },
+  'まどうし':       { hp:16, atk:11, def:8,  agi:9,  exp:11, gold:22, art:'mage', spell:true },
+  'ベビードラゴン': { hp:30, atk:18, def:14, agi:12, exp:20, gold:40, art:'drag', breath:true },
+};
+
+/* ================= プレイヤー・状態 ================= */
+const player = { tx:9, ty:11, px:9*T, py:11*T, dir:'up', animT:0, pal: hero.pal };
+const SPEED = 4;
+let state = 'title';   // title / field / shop / menu / battle
+let dialog = null;     // {pages, pi, ci, onEnd, choiceOpts, choiceCb}
+let choice = null;     // {opts, sel, cb}
+let shop = null;       // {npc, sel}
+let menu = null;       // {sel}
+let battle = null;
+let fade = null;       // {phase:'out'|'in', t, onMid, onDone}
+let titleSel = 0;
+
+/* ---- メッセージ・選択肢 ---- */
+function msg(pages, onEnd) {
+  dialog = { pages, pi:0, ci:0, onEnd: onEnd || null };
+}
+function msgC(pages, opts, cb) {
+  dialog = { pages, pi:0, ci:0, onEnd:null, choiceOpts:opts, choiceCb:cb };
+}
+function updateDialog() {
+  const page = dialog.pages[dialog.pi];
+  dialog.ci = Math.min(page.length, dialog.ci + 2);
+  if (pressed(CONFIRM) || pressed(CANCEL)) {
+    if (dialog.ci < page.length) { dialog.ci = page.length; return; }
+    if (dialog.pi < dialog.pages.length - 1) { dialog.pi++; dialog.ci = 0; seConfirm(); return; }
+    if (dialog.choiceOpts) {
+      if (!choice) { choice = { opts:dialog.choiceOpts, sel:0, cb:dialog.choiceCb }; seConfirm(); }
+      return;
+    }
+    const f = dialog.onEnd;
+    dialog = null;
+    seConfirm();
+    if (f) f();
+  }
+}
+function updateChoice() {
+  if (pUp())   { choice.sel = (choice.sel + choice.opts.length - 1) % choice.opts.length; seCursor(); }
+  if (pDown()) { choice.sel = (choice.sel + 1) % choice.opts.length; seCursor(); }
+  if (pressed(CONFIRM)) {
+    const c = choice; choice = null; dialog = null; seConfirm();
+    c.cb(c.sel);
+  } else if (pressed(CANCEL)) {
+    const c = choice; choice = null; dialog = null; seCancel();
+    c.cb(c.opts.length - 1);
+  }
+}
+function startFade(onMid, onDone) {
+  fade = { phase:'out', t:0, onMid, onDone };
+}
+function teleport(m, x, y, dir) {
+  mapId = m; map = MAPS[m];
+  player.tx = x; player.ty = y;
+  player.px = x * T; player.py = y * T;
+  if (dir) player.dir = dir;
+  setTrack(map.track);
+}
+
+/* ---- セーブ ---- */
+function save() {
+  try {
+    localStorage.setItem('hajimari_save', JSON.stringify({
+      lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
+      weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
+    }));
+  } catch (e) {}
+}
+function loadSave() {
+  try {
+    const d = JSON.parse(localStorage.getItem('hajimari_save'));
+    if (!d) return false;
+    Object.assign(hero, d);
+    return true;
+  } catch (e) { return false; }
+}
+function hasSave() {
+  try { return !!localStorage.getItem('hajimari_save'); } catch (e) { return false; }
+}
+function newGame() {
+  hero.lv = 1; hero.exp = 0; hero.gold = 120;
+  hero.hp = 16; hero.mp = 0;
+  hero.weapon = hero.armor = hero.shield = null;
+  hero.inv = {};
+  teleport('town', 9, 11, 'up');
+  state = 'field';
+  msg(["アルファの まちに ようこそ！\nＸキーで メニューが ひらけるよ。"]);
+}
+function continueGame() {
+  loadSave();
+  teleport('town', 10, 5, 'down');
+  state = 'field';
+  msg(["ぼうけんのしょから さいかい した！"]);
+}
+/* ================= フィールド ================= */
+let lastBump = -99;
+function updateField() {
+  const moving = player.px !== player.tx * T || player.py !== player.ty * T;
+  if (moving) {
+    stepToward(player);
+    if (player.px === player.tx * T && player.py === player.ty * T) onArrive();
+    return;
+  }
+  if (pressed(CONFIRM)) { interact(); return; }
+  if (pressed(CANCEL)) { seConfirm(); state = 'menu'; menu = { sel:0 }; return; }
+
+  const d = heldDir();
+  if (!d) { player.animT = 0; return; }
+  player.dir = d;
+  const [dx, dy] = DXY[d];
+  const nx = player.tx + dx, ny = player.ty + dy;
+  if (isFree(nx, ny, false)) {
+    player.tx = nx; player.ty = ny;
+  } else if (tick - lastBump > 16) {
+    seBump(); lastBump = tick;
+  }
+}
+function onArrive() {
+  const w = map.warps && map.warps[player.tx + ',' + player.ty];
+  if (w) {
+    seWarp();
+    startFade(() => teleport(w.map, w.x, w.y, w.dir));
+    return;
+  }
+  if (mapId === 'world') checkEncounter();
+}
+function stepToward(e) {
+  const gx = e.tx * T, gy = e.ty * T;
+  e.px += Math.sign(gx - e.px) * Math.min(SPEED, Math.abs(gx - e.px));
+  e.py += Math.sign(gy - e.py) * Math.min(SPEED, Math.abs(gy - e.py));
+  e.animT++;
+}
+function interact() {
+  const [dx, dy] = DXY[player.dir];
+  const fx = player.tx + dx, fy = player.ty + dy;
+  let npc = entityAt(fx, fy);
+  if (!npc && tileAt(mapId, fx, fy) === 'C') npc = entityAt(fx + dx, fy + dy);
+  if (!npc) return;
+  seConfirm();
+  npc.dir = facingBack(player.dir);
+  if (npc.goods) {
+    state = 'shop';
+    shop = { npc, sel:0 };
+    msg([npc.greet]);
+  } else if (npc.service === 'inn') {
+    innTalk();
+  } else {
+    msg(npc.lines.slice());
+  }
+}
+function innTalk() {
+  msgC(["やどやに ようこそ！ ひとばん １０Ｇだよ。\nとまっていくかい？"], ["とまる","やめておく"], i => {
+    if (i !== 0) { msg(["また どうぞ！"]); return; }
+    if (hero.gold < 10) { msg(["おっと… おかねが たりないようだ。"]); return; }
+    hero.gold -= 10;
+    startFade(() => {
+      hero.hp = maxHp(); hero.mp = maxMp();
+      save();
+    }, () => {
+      seSave();
+      msg(["おはよう！ よく ねむれたかい？\nぼうけんのしょに きろくしておいたよ。"]);
+    });
+  });
+}
+function initEnt(n) {
+  if (n.px !== undefined) return;
+  n.px = n.tx * T; n.py = n.ty * T; n.animT = 0;
+  n.home = [n.tx, n.ty]; n.wait = 60;
+}
+function updateNpcs() {
+  for (const n of map.npcs) {
+    initEnt(n);
+    const moving = n.px !== n.tx * T || n.py !== n.ty * T;
+    if (moving) { stepToward(n); continue; }
+    if (!n.wander || state !== 'field' || dialog) continue;
+    if (--n.wait > 0) continue;
+    n.wait = 60 + Math.floor(Math.random() * 150);
+    const d = ['up','down','left','right'][Math.floor(Math.random() * 4)];
+    n.dir = d;
+    if (Math.random() < 0.4) continue;
+    const [dx, dy] = DXY[d];
+    const nx = n.tx + dx, ny = n.ty + dy;
+    if (Math.abs(nx - n.home[0]) > 2 || Math.abs(ny - n.home[1]) > 2) continue;
+    if (isFree(nx, ny, true)) { n.tx = nx; n.ty = ny; }
+  }
+}
+
+/* ---- エンカウント ---- */
+function checkEncounter() {
+  const ch = tileAt('world', player.tx, player.ty);
+  const d = Math.abs(player.tx - 20) + Math.abs(player.ty - 8);
+  if (d < 3) return;
+  const rate = ch === 'F' ? 1 / 7 : 1 / 14;
+  if (Math.random() >= rate) return;
+  const forest = ch === 'F';
+  let pool;
+  if (d <= 7)       pool = forest ? ['おおコウモリ','スライム'] : ['スライム','スライム','おおコウモリ'];
+  else if (d <= 14) pool = forest ? ['がいこつ','まどうし','おおコウモリ'] : ['おおコウモリ','がいこつ','スライム'];
+  else              pool = forest ? ['まどうし','ベビードラゴン','がいこつ'] : ['がいこつ','まどうし','ベビードラゴン'];
+  startBattle(pool[Math.floor(Math.random() * pool.length)], forest ? 'forest' : 'grass');
+}
+
+/* ================= 店 ================= */
+function updateShop() {
+  const goods = shop.npc.goods;
+  if (pUp())   { shop.sel = (shop.sel + goods.length - 1) % goods.length; seCursor(); }
+  if (pDown()) { shop.sel = (shop.sel + 1) % goods.length; seCursor(); }
+  if (pressed(CONFIRM)) {
+    const it = goods[shop.sel];
+    msgC([`${it.name} だね。 ${it.price}Ｇに なるよ。\nかうかい？`], ["はい","いいえ"], i => {
+      if (i !== 0) { msg(["ほかにも ゆっくり みていってくれ。"]); return; }
+      if (hero.gold < it.price) { msg(["おっと… おかねが たりないようだ。"]); return; }
+      hero.gold -= it.price;
+      addInv(it.name);
+      seBuy();
+      if (slotOf(it.name)) {
+        msgC([`${it.name}を てにいれた！\nすぐに そうび するかい？`], ["そうびする","しまっておく"], j => {
+          if (j === 0) { equip(it.name); seConfirm(); msg([`${it.name}を そうびした！`]); }
+        });
+      } else {
+        msg([`${it.name}を てにいれた！\nまいど あり！`]);
+      }
+    });
+    return;
+  }
+  if (pressed(CANCEL)) {
+    const bye = shop.npc.bye;
+    shop = null;
+    state = 'field';
+    msg([bye]);
+  }
+}
+
+/* ================= メニュー ================= */
+function menuEntries() {
+  const list = [];
+  for (const s of learnedSpells()) list.push({ type:'spell', name:s });
+  for (const n of Object.keys(hero.inv)) list.push({ type:'item', name:n });
+  return list;
+}
+function updateMenu() {
+  const list = menuEntries();
+  if (pressed(CANCEL)) { seCancel(); state = 'field'; menu = null; return; }
+  if (list.length === 0) { if (pressed(CONFIRM)) seCancel(); return; }
+  menu.sel = clamp(menu.sel, 0, list.length - 1);
+  if (pUp())   { menu.sel = (menu.sel + list.length - 1) % list.length; seCursor(); }
+  if (pDown()) { menu.sel = (menu.sel + 1) % list.length; seCursor(); }
+  if (pressed(CONFIRM)) useEntry(list[menu.sel]);
+}
+function useEntry(en) {
+  if (en.type === 'spell') {
+    const sp = SPELLS[en.name];
+    if (!sp.field) { msg(["ここで となえても なにも おこらない。"]); return; }
+    if (hero.mp < sp.mp) { msg(["ＭＰが たりない！"]); return; }
+    if (hero.hp >= maxHp()) { msg(["ＨＰは まんたんだ。"]); return; }
+    hero.mp -= sp.mp;
+    const v = Math.min(randInt(10, 17), maxHp() - hero.hp);
+    hero.hp += v;
+    seHeal();
+    msg([`${hero.name}は ヒールを となえた！\nＨＰが ${v} かいふくした！`]);
+    return;
+  }
+  const n = en.name;
+  if (slotOf(n)) {
+    equip(n); seConfirm();
+    msg([`${n}を そうびした！`]);
+    return;
+  }
+  const def = ITEMS[n];
+  if (def && def.use === 'heal') {
+    if (hero.hp >= maxHp()) { msg(["ＨＰは まんたんだ。"]); return; }
+    decInv(n);
+    const v = Math.min(randInt(20, 27), maxHp() - hero.hp);
+    hero.hp += v;
+    seHeal();
+    msg([`やくそうを つかった！\nＨＰが ${v} かいふくした！`]);
+    return;
+  }
+  if (def && def.use === 'wing') {
+    if (mapId !== 'world') { msg(["ここでは つかえない。"]); return; }
+    decInv(n);
+    seWarp();
+    startFade(() => teleport('town', 10, 6, 'down'), () => msg(["キメラのつばさを つかった！\nアルファの まちに もどってきた。"]));
+    return;
+  }
+  msg(["いまは つかう ひつようは なさそうだ。"]);
+}
+/* ================= 戦闘 ================= */
+function startBattle(name, terrain) {
+  const e = ENEMIES[name];
+  battle = { name, en:e, ehp:e.hp, terrain, mode:'intro', sel:0, ssel:0, isel:0,
+             intro:22, shake:0, enFlash:0, fx:0 };
+  state = 'battle';
+  seEncount();
+  setTrack('battle');
+}
+const BCMDS = ['たたかう','じゅもん','どうぐ','にげる'];
+function updateBattle() {
+  if (battle.shake > 0) battle.shake--;
+  if (battle.enFlash > 0) battle.enFlash--;
+  if (battle.fx > 0) battle.fx--;
+  if (battle.mode === 'intro') {
+    if (--battle.intro <= 0) {
+      battle.mode = 'wait';
+      msg([`${battle.name}が あらわれた！`], () => {
+        if (Math.random() < 0.12) {
+          msg([`${battle.name}は ふいをついて おそいかかってきた！`], () => enemyAct());
+        } else battle.mode = 'cmd';
+      });
+    }
+    return;
+  }
+  if (battle.mode === 'cmd') {
+    if (pUp())   { battle.sel = (battle.sel + 3) % 4; seCursor(); }
+    if (pDown()) { battle.sel = (battle.sel + 1) % 4; seCursor(); }
+    if (pressed(CONFIRM)) {
+      seConfirm();
+      if (battle.sel === 0) heroAttack();
+      else if (battle.sel === 1) {
+        const sp = learnedSpells();
+        if (sp.length === 0) { battle.mode = 'wait'; msg(["まだ じゅもんを おぼえていない！"], () => battle.mode = 'cmd'); }
+        else { battle.mode = 'spell'; battle.ssel = 0; }
+      }
+      else if (battle.sel === 2) {
+        const its = battleItems();
+        if (its.length === 0) { battle.mode = 'wait'; msg(["つかえる どうぐを もっていない！"], () => battle.mode = 'cmd'); }
+        else { battle.mode = 'item'; battle.isel = 0; }
+      }
+      else tryRun();
+    }
+    return;
+  }
+  if (battle.mode === 'spell') {
+    const sp = learnedSpells();
+    if (pUp())   { battle.ssel = (battle.ssel + sp.length - 1) % sp.length; seCursor(); }
+    if (pDown()) { battle.ssel = (battle.ssel + 1) % sp.length; seCursor(); }
+    if (pressed(CANCEL)) { seCancel(); battle.mode = 'cmd'; return; }
+    if (pressed(CONFIRM)) castSpell(sp[battle.ssel]);
+    return;
+  }
+  if (battle.mode === 'item') {
+    const its = battleItems();
+    if (pUp())   { battle.isel = (battle.isel + its.length - 1) % its.length; seCursor(); }
+    if (pDown()) { battle.isel = (battle.isel + 1) % its.length; seCursor(); }
+    if (pressed(CANCEL)) { seCancel(); battle.mode = 'cmd'; return; }
+    if (pressed(CONFIRM)) useBattleItem(its[battle.isel]);
+    return;
+  }
+}
+const battleItems = () => Object.keys(hero.inv).filter(n => ITEMS[n] && ITEMS[n].use === 'heal');
+
+function heroAttack() {
+  battle.mode = 'wait';
+  msg([`${hero.name}の こうげき！`], () => {
+    const crit = Math.random() < 1 / 16;
+    let dmg;
+    if (crit) dmg = randInt(Math.floor(atk() / 2), atk());
+    else {
+      const base = atk() - Math.floor(battle.en.def / 2);
+      dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
+    }
+    if (dmg <= 0) {
+      msg(["ミス！ ダメージを あたえられない！"], afterHero);
+    } else {
+      battle.ehp -= dmg;
+      battle.enFlash = 16;
+      seHit();
+      const pages = crit ? ["かいしんの いちげき！！", `${battle.name}に ${dmg}の ダメージ！`]
+                         : [`${battle.name}に ${dmg}の ダメージ！`];
+      msg(pages, afterHero);
+    }
+  });
+}
+function castSpell(name) {
+  const sp = SPELLS[name];
+  if (hero.mp < sp.mp) { battle.mode = 'wait'; msg(["ＭＰが たりない！"], () => battle.mode = 'cmd'); return; }
+  hero.mp -= sp.mp;
+  battle.mode = 'wait';
+  if (name === 'ヒール') {
+    seHeal();
+    const v = Math.min(randInt(10, 17), maxHp() - hero.hp);
+    hero.hp += v;
+    msg([`${hero.name}は ヒールを となえた！`, `ＨＰが ${v} かいふくした！`], () => enemyAct());
+  } else {
+    seSpark();
+    battle.fx = 14;
+    const dmg = randInt(8, 16);
+    battle.ehp -= dmg;
+    battle.enFlash = 16;
+    msg([`${hero.name}は スパークを となえた！`, `${battle.name}に ${dmg}の ダメージ！`], afterHero);
+  }
+}
+function useBattleItem(name) {
+  battle.mode = 'wait';
+  decInv(name);
+  seHeal();
+  const v = Math.min(randInt(20, 27), maxHp() - hero.hp);
+  hero.hp += v;
+  msg([`${hero.name}は やくそうを つかった！`, `ＨＰが ${v} かいふくした！`], () => enemyAct());
+}
+function afterHero() {
+  if (battle.ehp <= 0) victory();
+  else enemyAct();
+}
+function enemyAct() {
+  battle.mode = 'wait';
+  const en = battle.en;
+  let act = 'atk';
+  if (en.spell && Math.random() < 0.35) act = 'spark';
+  if (en.breath && Math.random() < 0.35) act = 'fire';
+  if (act === 'spark') {
+    seSpark(); battle.fx = 14;
+    const dmg = randInt(6, 12);
+    hero.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}は スパークを となえた！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+    return;
+  }
+  if (act === 'fire') {
+    seSpark(); battle.fx = 14;
+    const dmg = randInt(8, 14);
+    hero.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}は ほのおを はいた！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+    return;
+  }
+  const base = en.atk - Math.floor(dfn() / 2);
+  const dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
+  if (dmg <= 0) {
+    msg([`${battle.name}の こうげき！`, `ミス！ ${hero.name}は ダメージを うけない！`], afterEnemy);
+  } else {
+    hero.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}の こうげき！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+  }
+}
+function afterEnemy() {
+  if (hero.hp <= 0) { hero.hp = 0; died(); }
+  else battle.mode = 'cmd';
+}
+function tryRun() {
+  battle.mode = 'wait';
+  msg([`${hero.name}は にげだした！`], () => {
+    const p = clamp(0.55 + (LVT[hero.lv].agi - battle.en.agi) * 0.03, 0.25, 0.95);
+    if (Math.random() < p) endBattle();
+    else msg(["しかし まわりこまれて しまった！"], () => enemyAct());
+  });
+}
+function victory() {
+  seVictory();
+  const g = Math.max(1, Math.round(battle.en.gold * (0.8 + Math.random() * 0.4)));
+  hero.gold += g;
+  hero.exp += battle.en.exp;
+  msg([`${battle.name}を やっつけた！`,
+       `けいけんち ${battle.en.exp}ポイント かくとく！\n${g}ゴールドを てにいれた！`],
+      () => levelChain(endBattle));
+}
+function levelChain(done) {
+  if (hero.lv < MAXLV && hero.exp >= LVT[hero.lv + 1].exp) {
+    const o = LVT[hero.lv], n = LVT[hero.lv + 1];
+    hero.lv++;
+    hero.hp += n.hp - o.hp;
+    hero.mp += n.mp - o.mp;
+    seLevelUp();
+    const pages = [`${hero.name}は レベル${hero.lv}に あがった！`,
+      `ちから +${n.str - o.str}　すばやさ +${n.agi - o.agi}\nさいだいＨＰ +${n.hp - o.hp}　さいだいＭＰ +${n.mp - o.mp}`];
+    for (const s of Object.keys(SPELLS))
+      if (SPELLS[s].lv === hero.lv) pages.push(`じゅもん「${s}」を おぼえた！`);
+    msg(pages, () => levelChain(done));
+  } else done();
+}
+function endBattle() {
+  battle = null;
+  state = 'field';
+  setTrack(map.track);
+}
+function died() {
+  msg(["めのまえが まっくらに なった…"], () => {
+    hero.gold = Math.floor(hero.gold / 2);
+    hero.hp = maxHp(); hero.mp = maxMp();
+    battle = null;
+    state = 'field';
+    startFade(() => { teleport('town', 10, 7, 'down'); },
+      () => msg(["「しんでしまうとは なさけない！\n　だが チャンスを やろう」\nどこからか こえが きこえた…"]));
+  });
+}
+/* ================= 更新 ================= */
+function update() {
+  tick++;
+  if (fade) {
+    fade.t++;
+    if (fade.phase === 'out' && fade.t >= 10) {
+      if (fade.onMid) fade.onMid();
+      fade.phase = 'in'; fade.t = 0;
+    } else if (fade.phase === 'in' && fade.t >= 10) {
+      const f = fade.onDone;
+      fade = null;
+      if (f) f();
+    }
+    justPressed.clear();
+    return;
+  }
+  if (choice) updateChoice();
+  else if (dialog) updateDialog();
+  else if (state === 'title') updateTitle();
+  else if (state === 'field') updateField();
+  else if (state === 'shop') updateShop();
+  else if (state === 'menu') updateMenu();
+  else if (state === 'battle') updateBattle();
+  if (state === 'field' || state === 'shop' || state === 'menu') updateNpcs();
+  justPressed.clear();
+}
+function updateTitle() {
+  const opts = hasSave() ? ['はじめから','つづきから'] : ['はじめから'];
+  if (pUp() || pDown()) { titleSel = (titleSel + 1) % opts.length; seCursor(); }
+  titleSel = clamp(titleSel, 0, opts.length - 1);
+  if (pressed(CONFIRM)) {
+    seConfirm();
+    startFade(() => { if (opts[titleSel] === 'つづきから') continueGame(); else newGame(); });
+  }
+}
+
+/* ================= 描画 ================= */
+function getCam() {
+  const g = map.grid, mw = g[0].length * T, mh = g.length * T;
+  return {
+    x: mw <= cv.width  ? -(cv.width - mw) / 2  : clamp(player.px + T / 2 - cv.width / 2, 0, mw - cv.width),
+    y: mh <= cv.height ? -(cv.height - mh) / 2 : clamp(player.py + T / 2 - cv.height / 2, 0, mh - cv.height),
+  };
+}
+function drawChara(e, cam) {
+  const x = e.px - cam.x, y = e.py - cam.y;
+  const moving = e.px !== e.tx * T || e.py !== e.ty * T;
+  const frame = moving ? Math.floor(e.animT / 7) % 2 : 0;
+  const bob = frame ? -U : 0;
+  const p = e.pal;
+  const r = (rx, ry, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + rx * U, y + ry * U + bob, w * U, h * U); };
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(x + 8 * U, y + 15 * U, 5.5 * U, 1.8 * U, 0, 0, Math.PI * 2);
+  ctx.fill();
+  r(3, 1, 10, 3, p.hair);
+  r(2, 3, 2, 3, p.hair); r(12, 3, 2, 3, p.hair);
+  r(4, 1, 4, 1, 'rgba(255,255,255,0.25)');
+  if (e.dir === 'up') {
+    r(4, 4, 8, 4, p.hair);
+  } else {
+    r(4, 4, 8, 4, p.skin);
+    if (e.dir !== 'right') r(5, 5, 1, 2, '#201810');
+    if (e.dir !== 'left')  r(10, 5, 1, 2, '#201810');
+  }
+  r(3, 8, 10, 5, p.cloth);
+  r(3, 8, 4, 4, 'rgba(255,255,255,0.12)');
+  r(2, 8, 1, 4, p.cloth); r(13, 8, 1, 4, p.cloth);
+  r(3, 11, 10, 1, 'rgba(0,0,0,0.3)');
+  if (frame === 0) { r(4, 13, 3, 2, p.legs); r(9, 13, 3, 2, p.legs); }
+  else if (e.dir === 'left' || e.dir === 'right') { r(5, 13, 3, 2, p.legs); r(8, 14, 3, 1, p.legs); }
+  else { r(4, 13, 3, 2, p.legs); r(9, 14, 3, 1, p.legs); }
+}
+function drawWindow(x, y, w, h) {
+  ctx.fillStyle = 'rgba(4,4,20,0.92)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(x + 4, y + 4, w - 8, h - 8, 8); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(x + 8, y + 8, w - 16, h - 16, 6); ctx.stroke();
+}
+function text(s, x, y, size = 24, color = '#fff', align = 'left') {
+  ctx.font = `bold ${size}px 'Hiragino Kaku Gothic ProN','MS Gothic',monospace`;
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'top';
+  ctx.fillText(s, x, y);
+  ctx.textAlign = 'left';
+}
+function drawDialog() {
+  const x = 40, y = cv.height - 200, w = cv.width - 80, h = 168;
+  drawWindow(x, y, w, h);
+  const page = dialog.pages[dialog.pi];
+  page.slice(0, dialog.ci).split('\n').forEach((line, i) => text(line, x + 36, y + 30 + i * 46, 26));
+  if (dialog.ci >= page.length && !choice && !dialog.choiceOpts && Math.floor(tick / 18) % 2 === 0
+      && (dialog.pi < dialog.pages.length - 1 || dialog.onEnd !== undefined)) {
+    text('▼', x + w / 2 - 12, y + h - 34, 20, '#ffd860');
+  }
+}
+function drawChoice() {
+  const w = 240, h = choice.opts.length * 46 + 36;
+  const x = cv.width - 320, y = cv.height - 210 - h;
+  drawWindow(x, y, w, h);
+  choice.opts.forEach((o, i) => {
+    const me = i === choice.sel;
+    if (me) text('▶', x + 22, y + 24 + i * 46, 22, '#ffd860');
+    text(o, x + 56, y + 24 + i * 46, 24, me ? '#ffd860' : '#fff');
+  });
+}
+function drawGold() {
+  drawWindow(cv.width - 230, 24, 200, 64);
+  text('Ｇ', cv.width - 198, 42, 24, '#ffd860');
+  text(String(hero.gold), cv.width - 62, 42, 24, '#fff', 'right');
+}
+function drawShop() {
+  drawGold();
+  const goods = shop.npc.goods;
+  const x = 50, y = 50, w = 500, h = goods.length * 48 + 44;
+  drawWindow(x, y, w, h);
+  goods.forEach((it, i) => {
+    const ty = y + 30 + i * 48;
+    const me = i === shop.sel;
+    if (me) text('▶', x + 24, ty, 24, '#ffd860');
+    text(it.name, x + 62, ty, 24, me ? '#ffd860' : '#fff');
+    text(it.price + 'Ｇ', x + w - 36, ty, 24, me ? '#ffd860' : '#fff', 'right');
+  });
+}
+function drawMenu() {
+  const x = 40, y = 40, w = 380, h = 470;
+  drawWindow(x, y, w, h);
+  text('つよさ', x + 30, y + 22, 22, '#ffd860');
+  const L = [
+    ['ＬＶ', hero.lv], ['ＨＰ', hero.hp + '/' + maxHp()], ['ＭＰ', hero.mp + '/' + maxMp()],
+    ['けいけんち', hero.exp],
+    ['つぎのＬＶ', hero.lv < MAXLV ? LVT[hero.lv + 1].exp - hero.exp : '--'],
+    ['こうげき力', atk()], ['しゅび力', dfn()], ['ゴールド', hero.gold + 'Ｇ'],
+  ];
+  L.forEach(([k, v], i) => {
+    text(k, x + 36, y + 62 + i * 36, 22);
+    text(String(v), x + w - 40, y + 62 + i * 36, 22, '#fff', 'right');
+  });
+  text('そうび', x + 30, y + 360, 22, '#ffd860');
+  text('Ｅ ' + (hero.weapon || 'なし'), x + 50, y + 392, 20);
+  text('Ｅ ' + (hero.armor || 'なし') + '／' + (hero.shield || 'なし'), x + 50, y + 420, 20);
+
+  const list = menuEntries();
+  const x2 = 440, w2 = 480, h2 = Math.max(1, list.length) * 42 + 100;
+  drawWindow(x2, y, w2, h2);
+  text('じゅもん・どうぐ', x2 + 30, y + 22, 22, '#ffd860');
+  if (list.length === 0) text('なし', x2 + 60, y + 64, 22, '#aaa');
+  list.forEach((en, i) => {
+    const me = i === menu.sel;
+    const label = en.type === 'spell' ? `✦ ${en.name}（MP${SPELLS[en.name].mp}）` : en.name;
+    if (me) text('▶', x2 + 24, y + 64 + i * 42, 22, '#ffd860');
+    text(label, x2 + 56, y + 64 + i * 42, 22, me ? '#ffd860' : '#fff');
+    if (en.type === 'item') text('×' + hero.inv[en.name], x2 + w2 - 40, y + 64 + i * 42, 22, '#fff', 'right');
+  });
+  text('Ｚ：つかう／そうび　Ｘ：とじる', x2 + 30, y + h2 - 40, 18, '#8aa');
+}
+function drawBattle() {
+  ctx.fillStyle = '#04040c';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  const sx = (battle.shake > 0) ? randInt(-6, 6) : 0;
+  const sy = (battle.shake > 0) ? randInt(-4, 4) : 0;
+  const SX = 240 + sx, SY = 64 + sy, SW = 480, SH = 340;
+
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(SX, SY, SW, SH, 8); ctx.clip();
+  ctx.fillStyle = '#79b8ee'; ctx.fillRect(SX, SY, SW, SH);
+  ctx.fillStyle = '#94cdf6'; ctx.fillRect(SX, SY + 110, SW, 60);
+  ctx.fillStyle = '#b8e0fa'; ctx.fillRect(SX, SY + 170, SW, 30);
+  ctx.fillStyle = '#2a6e34';
+  for (let i = 0; i < 6; i++) {
+    ctx.beginPath();
+    ctx.ellipse(SX + 50 + i * 90, SY + 205, 70, 28, 0, Math.PI, 0);
+    ctx.fill();
+  }
+  ctx.fillStyle = battle.terrain === 'forest' ? '#33701f' : '#5aa83e';
+  ctx.fillRect(SX, SY + 205, SW, SH - 205);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  for (let i = 0; i < 4; i++) ctx.fillRect(SX, SY + 235 + i * 28, SW, 3);
+  if (battle.terrain === 'forest') {
+    ctx.fillStyle = '#1d4a14';
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(SX + 20 + i * 62, SY + 206);
+      ctx.lineTo(SX + 44 + i * 62, SY + 158);
+      ctx.lineTo(SX + 68 + i * 62, SY + 206);
+      ctx.fill();
+    }
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(SX + SW / 2, SY + 295, 95, 18, 0, 0, Math.PI * 2); ctx.fill();
+  const visible = !(battle.enFlash > 0 && tick % 4 < 2) && battle.ehp > 0;
+  if (visible) drawArt(ART[battle.en.art], SX + SW / 2 - 96, SY + 110, 12);
+  ctx.restore();
+
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(SX, SY, SW, SH, 8); ctx.stroke();
+
+  drawWindow(28, 28, 200, 168);
+  text(hero.name, 56, 48, 22, '#ffd860');
+  text('ＬＶ', 56, 84, 20);  text(String(hero.lv), 198, 84, 20, '#fff', 'right');
+  text('ＨＰ', 56, 118, 20);
+  text(hero.hp + '/' + maxHp(), 198, 118, 20, hero.hp <= maxHp() / 4 ? '#ff8060' : '#fff', 'right');
+  text('ＭＰ', 56, 152, 20); text(hero.mp + '/' + maxMp(), 198, 152, 20, '#fff', 'right');
+
+  if (battle.mode === 'cmd' || battle.mode === 'spell' || battle.mode === 'item') {
+    drawWindow(28, 420, 230, 4 * 44 + 40);
+    BCMDS.forEach((c, i) => {
+      const me = battle.mode === 'cmd' && i === battle.sel;
+      if (me) text('▶', 50, 446 + i * 44, 22, '#ffd860');
+      text(c, 84, 446 + i * 44, 22, me ? '#ffd860' : '#fff');
+    });
+    if (battle.mode === 'spell') {
+      const sp = learnedSpells();
+      drawWindow(270, 420, 320, sp.length * 44 + 40);
+      sp.forEach((s, i) => {
+        const me = i === battle.ssel;
+        if (me) text('▶', 292, 446 + i * 44, 22, '#ffd860');
+        text(`${s}　MP${SPELLS[s].mp}`, 326, 446 + i * 44, 22, me ? '#ffd860' : '#fff');
+      });
+    }
+    if (battle.mode === 'item') {
+      const its = battleItems();
+      drawWindow(270, 420, 320, its.length * 44 + 40);
+      its.forEach((n, i) => {
+        const me = i === battle.isel;
+        if (me) text('▶', 292, 446 + i * 44, 22, '#ffd860');
+        text(`${n}　×${hero.inv[n]}`, 326, 446 + i * 44, 22, me ? '#ffd860' : '#fff');
+      });
+    }
+  }
+  if (battle.fx > 0 && tick % 4 < 2) {
+    ctx.fillStyle = 'rgba(255,230,120,0.35)';
+    ctx.fillRect(SX, SY, SW, SH);
+  }
+  if (battle.mode === 'intro') {
+    ctx.fillStyle = battle.intro % 8 < 4 ? '#fff' : '#000';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+}
+function drawTitle() {
+  ctx.fillStyle = '#04040c';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  for (let i = 0; i < 40; i++) {
+    const x = rnd(i, 7, 1) * cv.width, y = rnd(i, 13, 2) * 360;
+    ctx.fillStyle = (Math.floor(tick / 30) + i) % 5 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+  drawArt(ART.sword, cv.width / 2 - 64, 96, 8);
+  text('はじまりの剣', cv.width / 2 + 4, 264, 64, '#222', 'center');
+  text('はじまりの剣', cv.width / 2, 260, 64, '#ffd860', 'center');
+  text('〜 アルファのまち と ひろがるせかい 〜', cv.width / 2, 348, 22, '#aac', 'center');
+  const opts = hasSave() ? ['はじめから','つづきから'] : ['はじめから'];
+  const w = 300, h = opts.length * 50 + 40;
+  drawWindow(cv.width / 2 - w / 2, 430, w, h);
+  opts.forEach((o, i) => {
+    const me = i === titleSel;
+    if (me && Math.floor(tick / 16) % 2 === 0) text('▶', cv.width / 2 - w / 2 + 36, 456 + i * 50, 24, '#ffd860');
+    text(o, cv.width / 2 - w / 2 + 80, 456 + i * 50, 26, me ? '#ffd860' : '#fff');
+  });
+}
+function draw() {
+  if (state === 'title') { drawTitle(); }
+  else if (state === 'battle') { drawBattle(); if (dialog) drawDialog(); }
+  else {
+    ctx.fillStyle = '#04040c';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    const cam = getCam();
+    const g = map.grid, cols = g[0].length, rows = g.length;
+    const x0 = Math.max(0, Math.floor(cam.x / T)), x1 = Math.min(cols - 1, Math.floor((cam.x + cv.width) / T));
+    const y0 = Math.max(0, Math.floor(cam.y / T)), y1 = Math.min(rows - 1, Math.floor((cam.y + cv.height) / T));
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++)
+        drawTile(g[y][x], x * T - cam.x, y * T - cam.y, x, y);
+    const ents = [...map.npcs, player];
+    for (const e of ents) initEnt(e);
+    ents.sort((a, b) => a.py - b.py);
+    for (const e of ents) drawChara(e, cam);
+    if (state === 'shop') drawShop();
+    if (state === 'menu') drawMenu();
+    if (dialog) drawDialog();
+  }
+  if (choice) drawChoice();
+  if (fade) {
+    const a = fade.phase === 'out' ? fade.t / 10 : 1 - fade.t / 10;
+    ctx.fillStyle = `rgba(0,0,0,${clamp(a, 0, 1)})`;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  for (let y = 0; y < cv.height; y += 4) ctx.fillRect(0, y, cv.width, 1);
+}
+
+/* ================= メインループ ================= */
+curTrack = 'title';
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+if (typeof globalThis.__TEST_HOOK === 'function') {
+  globalThis.__TEST_HOOK({
+    MAPS, ART, ENEMIES, hero,
+    getState: () => state,
+    press: c => { justPressed.add(c); },
+    startBattle, teleport, newGame,
+    setState: s => { state = s; },
+    update, draw,
+  });
+}
+</script>
+</body>
+</html>
