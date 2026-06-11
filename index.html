@@ -28,17 +28,18 @@ const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 
 /* ---- クリア者数カウンター(GitHub Pagesは静的なので外部カウンターAPIを利用) ---- */
-let clearCount = null;
-function syncClearCount(hit) {
+const counters = { clears: null, 'true-clears': null };  // 通常クリア / 裏ボス討伐
+function syncCounter(key, hit) {
   if (globalThis.__TEST_HOOK) return;  // テスト・スナップショット時は通信しない
   try {
-    fetch('https://abacus.jasoncameron.dev/' + (hit ? 'hit' : 'get') + '/hajimari-no-ken/clears')
+    fetch(`https://abacus.jasoncameron.dev/${hit ? 'hit' : 'get'}/hajimari-no-ken/${key}`)
       .then(r => r.json())
-      .then(d => { if (d && typeof d.value === 'number') clearCount = d.value; })
+      .then(d => { if (d && typeof d.value === 'number') counters[key] = d.value; })
       .catch(() => {});
   } catch (e) {}
 }
-syncClearCount(false);
+syncCounter('clears', false);
+syncCounter('true-clears', false);
 const T = 48;
 const U = T / 16;
 let tick = 0;
@@ -476,6 +477,23 @@ const ART = {
     ".KGGGLLLLLLGGGK.",
     "..KGGK....KGGK..",
     "..KKKK....KKKK.."]},
+  zouyu: { pal:{K:'#0a0e14',B:'#e890b8',C:'#50e8f0',D:'#22262e',W:'#3a4250',L:'#9af0e8',S:'#d8b090'}, rows:[
+    "....KKKKKKKK....",
+    "...KBBBBBBBBK...",
+    "..KBCBBCBBCBBK..",
+    "..KBBCBBBCBBBK..",
+    "..KBCBBCBBCBBK..",
+    "...KBBBBBBBBK...",
+    "....KKKKKKKK....",
+    "...KDDDDDDDDK...",
+    "..KDDWWWWWWDDK..",
+    ".KDDWLLLLLLWDDK.",
+    ".KSDWLLLLLLWDSK.",
+    ".KDDWWWWWWWWDDK.",
+    "..KDDDDDDDDDDK..",
+    "...KDKKKKKKDK...",
+    "...KDK....KDK...",
+    "...KKK....KKK..."]},
   demon: { pal:{K:'#140a18',H:'#e8d8c0',B:'#8a2440',R:'#ff4848',D:'#5e1830',W:'#38204a'}, rows:[
     "..K..........K..",
     ".KHK........KHK.",
@@ -958,6 +976,9 @@ const MAPS = {
       { tx:12, ty:11, dir:'left', wander:true, parade:true,
         pal:{hair:'#5038b8',skin:'#f0d8b8',cloth:'#6a94f0',legs:'#28448a'},
         lines:["勇者様の 物語を 歌に するわ！\n「はじまりの剣」って いう題で どう？"] },
+      // ---- クリア後にだけ 現れる 真の裏ボス ----
+      { tx:17, ty:1, dir:'down', secret:true, trueBoss:'ゾウユウ', sprite:'zouyu',
+        pal:{hair:'#16161e',skin:'#1e1e28',cloth:'#14181e',legs:'#0a0c10'} },
     ],
   },
   weapon: {
@@ -1131,7 +1152,8 @@ const tileAt = (m, x, y) => {
 const npcGone = n => (n.recruit && party.some(m => m.job === n.recruit))
   || (n.tame && party.some(m => m.job === n.tame))
   || (n.boss && hero.cleared)
-  || (n.parade && !hero.cleared);  // パレードはクリア後だけ現れる
+  || (n.parade && !hero.cleared)  // パレードはクリア後だけ現れる
+  || (n.secret && (!hero.cleared || hero.trueCleared));  // 真ボスはクリア後〜討伐まで
 function entityAt(x, y) {
   for (const n of map.npcs) if (!npcGone(n) && n.tx === x && n.ty === y) return n;
   return null;
@@ -1172,7 +1194,7 @@ const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? '
 
 const hero = {
   name:'勇者', lv:1, exp:0, hp:16, mp:0, gold:120,
-  weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false,
+  weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false, trueCleared:false,
   pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
 };
 const maxHp = () => LVT[hero.lv].hp;
@@ -1264,6 +1286,8 @@ const ENEMIES = {
                       breath:true, tame:'dragon' },
   '魔王':         { hp:220, atk:40, def:22, agi:18, exp:350, gold:800, art:'demon',
                       spell:true, breath:true, boss:true },
+  'ゾウユウ':       { hp:400, atk:52, def:30, agi:26, exp:999, gold:2500, art:'zouyu',
+                      spell:true, breath:true, trueBoss:true },
 };
 
 /* ================= プレイヤー・状態 ================= */
@@ -1333,7 +1357,7 @@ function save() {
     localStorage.setItem('hajimari_save', JSON.stringify({
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
-      cleared:hero.cleared, blessed:hero.blessed,
+      cleared:hero.cleared, blessed:hero.blessed, trueCleared:hero.trueCleared,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
       pos: { map:mapId, x:player.tx, y:player.ty },
     }));
@@ -1349,6 +1373,7 @@ function loadSave() {
     Object.assign(hero, d);
     hero.cleared = !!d.cleared;
     hero.blessed = !!d.blessed;
+    hero.trueCleared = !!d.trueCleared;
     // 旧バージョンのかな表記アイテムを漢字名へ移行
     const RENAMES = {
       'ひのきのぼう':'ひのきの棒', 'こんぼう':'こん棒', 'どうのつるぎ':'銅の剣',
@@ -1381,7 +1406,7 @@ function newGame() {
   hero.hp = 16; hero.mp = 0;
   hero.weapon = 'ひのきの棒';
   hero.armor = hero.shield = null;
-  hero.inv = {}; hero.cleared = false; hero.blessed = false;
+  hero.inv = {}; hero.cleared = false; hero.blessed = false; hero.trueCleared = false;
   party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
@@ -1473,6 +1498,12 @@ function interact() {
     msg(["よくぞ ここまで 来たな 小さき者…",
          "この世の闇は すべて 我が物。\nお前たちの 旅は ここで 終わりだ！"],
         () => startBattle(npc.boss, 'castle'));
+  } else if (npc.trueBoss) {
+    msg(["……システム、起動。",
+         "我は ゾウユウ。\nかつて 人間の システムエンジニア…\n今は 神の頭脳を 得た 存在。",
+         "魔王など 我が作った テストケースに すぎん。",
+         "この世界は 我が 設計し直す。\nお前たち 英雄は…… 不要な バグだ。\n消去 を 実行する！"],
+        () => startBattle(npc.trueBoss, 'castle'));
   } else if (npc.god) {
     godTalk();
   } else if (npc.tame) {
@@ -1680,22 +1711,36 @@ function useEntry(en) {
 }
 /* ================= 戦闘 ================= */
 function startBattle(name, terrain) {
-  const e = ENEMIES[name];
-  battle = { name, en:e, ehp:e.hp, terrain, mode:'intro', sel:0, ssel:0, isel:0,
-             intro:22, shake:0, enFlash:0, fx:0, slash:0, slashX:false,
-             slashHue:'white', bolt:0 };
+  const mk = n => ({ name:n, en:ENEMIES[n], hp:ENEMIES[n].hp, flash:0, fled:false });
+  // 魔王は 親衛隊２体を 引き連れて 現れる
+  const foes = ENEMIES[name].boss ? ['ウィッチ', name, 'サキュバス'].map(mk) : [mk(name)];
+  battle = { foes, terrain, mode:'intro', sel:0, ssel:0, isel:0, tsel:0, pending:null,
+             intro:22, shake:0, fx:0, slash:0, slashX:false,
+             slashHue:'white', bolt:0, fxX:0 };
   state = 'battle';
   seEncount();
   setTrack('battle');
 }
 const BCMDS = ['戦う','呪文','道具','逃げる'];
+const aliveFoes = () => battle.foes.filter(f => f.hp > 0);
+const FOE_OFFS = { 1:[0], 2:[-110, 110], 3:[-155, 0, 155] };
+const foeOffset = f => FOE_OFFS[battle.foes.length][battle.foes.indexOf(f)] || 0;
+const pickFoe = () => { const a = aliveFoes(); return a[Math.floor(Math.random() * a.length)]; };
+const dealFoe = (foe, dmg, pages) => {  // 敵にダメージ+撃破ページ追加
+  foe.hp -= dmg;
+  foe.flash = 16;
+  battle.fxX = foeOffset(foe);
+  if (foe.hp <= 0) { foe.hp = 0; pages.push(`${foe.name}を 倒した！`); }
+};
 function updateBattle() {
   if (battle.mode === 'intro') {
     if (--battle.intro <= 0) {
       battle.mode = 'wait';
-      msg([`${battle.name}が 現れた！`], () => {
+      const lead = battle.foes[Math.floor(battle.foes.length / 2)].name;
+      msg([battle.foes.length > 1 ? `${lead}が 手下を 引き連れて 現れた！`
+                                  : `${lead}が 現れた！`], () => {
         if (Math.random() < 0.12) {
-          msg([`${battle.name}は 不意をついて 襲いかかってきた！`], () => enemyAct());
+          msg([`${lead}${battle.foes.length > 1 ? 'たち' : ''}は 不意をついて 襲いかかってきた！`], () => enemyActAt(0));
         } else battle.mode = 'cmd';
       });
     }
@@ -1706,7 +1751,10 @@ function updateBattle() {
     if (pDown()) { battle.sel = (battle.sel + 1) % 4; seCursor(); }
     if (pressed(CONFIRM)) {
       seConfirm();
-      if (battle.sel === 0) heroAttack();
+      if (battle.sel === 0) {
+        if (aliveFoes().length > 1) { battle.mode = 'target'; battle.tsel = 0; battle.pending = 'atk'; }
+        else heroAttack(aliveFoes()[0]);
+      }
       else if (battle.sel === 1) {
         const sp = learnedSpells();
         if (sp.length === 0) { battle.mode = 'wait'; msg(["まだ 呪文を 覚えていない！"], () => battle.mode = 'cmd'); }
@@ -1737,33 +1785,45 @@ function updateBattle() {
     if (pressed(CONFIRM)) useBattleItem(its[battle.isel]);
     return;
   }
+  if (battle.mode === 'target') {  // どの敵を ねらうか
+    const a = aliveFoes();
+    if (pUp())   { battle.tsel = (battle.tsel + a.length - 1) % a.length; seCursor(); }
+    if (pDown()) { battle.tsel = (battle.tsel + 1) % a.length; seCursor(); }
+    if (pressed(CANCEL)) { seCancel(); battle.mode = 'cmd'; return; }
+    if (pressed(CONFIRM)) {
+      seConfirm();
+      const f = a[clamp(battle.tsel, 0, a.length - 1)];
+      if (battle.pending === 'spark') heroSpark(f);
+      else heroAttack(f);
+    }
+    return;
+  }
 }
 const battleItems = () => Object.keys(hero.inv).filter(n => ITEMS[n] && ITEMS[n].use === 'heal');
 
-function heroAttack() {
+function heroAttack(foe) {
   battle.mode = 'wait';
   msg([`${hero.name}の 攻撃！`], () => {
     const crit = Math.random() < 1 / 16;
     let dmg;
     if (crit) dmg = randInt(Math.floor(atk() / 2), atk());
     else {
-      const base = atk() - Math.floor(battle.en.def / 2);
+      const base = atk() - Math.floor(foe.en.def / 2);
       dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
     }
     if (dmg <= 0) {
       msg(["ミス！ ダメージを 与えられない！"], afterHero);
-    } else {
-      battle.ehp -= dmg;
-      battle.enFlash = 16;
-      battle.slash = crit ? 24 : 18;
-      battle.slashX = crit;
-      battle.slashHue = hero.blessed ? 'gold' : 'white';
-      seSlash();
-      const critName = hero.blessed ? "必殺！ シャイニングスラッシュ！！" : "会心の一撃！！";
-      const pages = crit ? [critName, `${battle.name}に ${dmg}の ダメージ！`]
-                         : [`${battle.name}に ${dmg}の ダメージ！`];
-      msg(pages, afterHero);
+      return;
     }
+    battle.slash = crit ? 24 : 18;
+    battle.slashX = crit;
+    battle.slashHue = hero.blessed ? 'gold' : 'white';
+    seSlash();
+    const critName = hero.blessed ? "必殺！ シャイニングスラッシュ！！" : "会心の一撃！！";
+    const pages = crit ? [critName] : [];
+    pages.push(`${foe.name}に ${dmg}の ダメージ！`);
+    dealFoe(foe, dmg, pages);
+    msg(pages, afterHero);
   });
 }
 function healTargetAuto() {  // いちばん きずついた いきている みかた
@@ -1774,30 +1834,37 @@ function healTargetAuto() {  // いちばん きずついた いきている み
 function castSpell(name) {
   const sp = SPELLS[name];
   if (hero.mp < sp.mp) { battle.mode = 'wait'; msg(["ＭＰが 足りない！"], () => battle.mode = 'cmd'); return; }
-  hero.mp -= sp.mp;
-  battle.mode = 'wait';
   if (name === 'ヒール') {
+    hero.mp -= sp.mp;
+    battle.mode = 'wait';
     seHeal();
     const t = healTargetAuto();
     const v = Math.min(randInt(10, 17), maxHpOf(t) - t.hp);
     t.hp += v;
     msg([`${hero.name}は ヒールを 唱えた！`, `${t.name}の ＨＰが ${v} 回復した！`], () => companionsAct(0));
-  } else if (hero.blessed) {  // 覚醒後のスパークは 稲妻と なる
+    return;
+  }
+  if (aliveFoes().length > 1) { battle.mode = 'target'; battle.tsel = 0; battle.pending = 'spark'; return; }
+  heroSpark(aliveFoes()[0]);
+}
+function heroSpark(foe) {
+  hero.mp -= SPELLS['スパーク'].mp;
+  battle.mode = 'wait';
+  const pages = [`${hero.name}は スパークを 唱えた！`];
+  let dmg;
+  if (hero.blessed) {  // 覚醒後のスパークは 稲妻と なる
     seThunder();
     battle.bolt = 20;
-    const dmg = randInt(18, 30);
-    battle.ehp -= dmg;
-    battle.enFlash = 16;
-    msg([`${hero.name}は スパークを 唱えた！`,
-         `天から 稲妻が 降り注ぐ！\n${battle.name}に ${dmg}の ダメージ！`], afterHero);
+    dmg = randInt(18, 30);
+    pages.push(`天から 稲妻が 降り注ぐ！\n${foe.name}に ${dmg}の ダメージ！`);
   } else {
     seSpark();
     battle.fx = 14;
-    const dmg = randInt(8, 16);
-    battle.ehp -= dmg;
-    battle.enFlash = 16;
-    msg([`${hero.name}は スパークを 唱えた！`, `${battle.name}に ${dmg}の ダメージ！`], afterHero);
+    dmg = randInt(8, 16);
+    pages.push(`${foe.name}に ${dmg}の ダメージ！`);
   }
+  dealFoe(foe, dmg, pages);
+  msg(pages, afterHero);
 }
 function useBattleItem(name) {
   battle.mode = 'wait';
@@ -1808,16 +1875,20 @@ function useBattleItem(name) {
   t.hp += v;
   msg([`${hero.name}は 薬草を 使った！`, `${t.name}の ＨＰが ${v} 回復した！`], () => companionsAct(0));
 }
+function winOrEnd() {  // 全滅後の分岐(逃げられただけなら 報酬なし)
+  if (battle.foes.some(f => !f.fled)) victory();
+  else endBattle();
+}
 function afterHero() {
-  if (battle.ehp <= 0) victory();
+  if (aliveFoes().length === 0) winOrEnd();
   else companionsAct(0);
 }
 function companionsAct(i) {  // 仲間は じどうで 戦う
-  if (battle.ehp <= 0) { victory(); return; }
-  if (i >= party.length) { enemyAct(); return; }
+  if (aliveFoes().length === 0) { winOrEnd(); return; }
+  if (i >= party.length) { enemyActAt(0); return; }
   const m = party[i];
   if (m.hp <= 0) { companionsAct(i + 1); return; }
-  const next = () => { if (battle.ehp <= 0) victory(); else companionsAct(i + 1); };
+  const next = () => { if (aliveFoes().length === 0) winOrEnd(); else companionsAct(i + 1); };
   const j = JOBS[m.job];
   if (j.caster && m.mp >= SPELLS['ヒール'].mp) {
     const hurt = allAllies().filter(a => a.hp > 0 && a.hp <= maxHpOf(a) * 0.45)
@@ -1833,113 +1904,148 @@ function companionsAct(i) {  // 仲間は じどうで 戦う
   }
   if (j.caster && hero.blessed && m.mp >= 8 && Math.random() < 0.75) {
     m.mp -= 8;  // 覚醒後は 上位魔法ライトニング
-    seThunder(); battle.bolt = 20;
+    const foe = pickFoe();
+    seThunder(); battle.bolt = 20; battle.fxX = foeOffset(foe);
     const dmg = randInt(22, 34);
-    battle.ehp -= dmg; battle.enFlash = 16;
-    msg([`${m.name}は ライトニングを 唱えた！`,
-         `稲妻が ${battle.name}を 貫く！\n${dmg}の ダメージ！`], next);
+    const pages = [`${m.name}は ライトニングを 唱えた！`,
+                   `稲妻が ${foe.name}を 貫く！\n${dmg}の ダメージ！`];
+    dealFoe(foe, dmg, pages);
+    msg(pages, next);
     return;
   }
   if (j.caster && m.mp >= SPELLS['スパーク'].mp && Math.random() < 0.75) {
     m.mp -= SPELLS['スパーク'].mp;
+    const foe = pickFoe();
     seSpark(); battle.fx = 14;
     const dmg = randInt(8, 16);
-    battle.ehp -= dmg; battle.enFlash = 16;
-    msg([`${m.name}は スパークを 唱えた！`, `${battle.name}に ${dmg}の ダメージ！`], next);
+    const pages = [`${m.name}は スパークを 唱えた！`, `${foe.name}に ${dmg}の ダメージ！`];
+    dealFoe(foe, dmg, pages);
+    msg(pages, next);
     return;
   }
   if (j.breath && Math.random() < 0.4) {  // ドラゴンの 炎のブレス
+    const foe = pickFoe();
     seSpark(); battle.fx = 14;
-    const base = atkOf(m) - Math.floor(battle.en.def / 2);
+    const base = atkOf(m) - Math.floor(foe.en.def / 2);
     const dmg = Math.max(3, Math.floor(randInt(Math.floor(base / 4), Math.floor(base / 2)) * 1.6));
-    battle.ehp -= dmg; battle.enFlash = 16;
-    msg([`${m.name}は 炎を 吐いた！`, `${battle.name}を 焼き尽くす！\n${dmg}の ダメージ！`], next);
+    const pages = [`${m.name}は 炎を 吐いた！`, `${foe.name}を 焼き尽くす！\n${dmg}の ダメージ！`];
+    dealFoe(foe, dmg, pages);
+    msg(pages, next);
     return;
   }
   if (!j.caster && !j.breath && hero.blessed && Math.random() < 0.35) {  // 雷神の斧 の 必殺
-    seThunder(); battle.bolt = 20;
-    const base = atkOf(m) - Math.floor(battle.en.def / 2);
+    const foe = pickFoe();
+    seThunder(); battle.bolt = 20; battle.fxX = foeOffset(foe);
+    const base = atkOf(m) - Math.floor(foe.en.def / 2);
     const dmg = Math.max(2, Math.floor(randInt(Math.floor(base / 4), Math.floor(base / 2)) * 1.8));
-    battle.ehp -= dmg; battle.enFlash = 16;
-    msg([`${m.name}の 必殺！ 稲妻斬り！`, `${battle.name}に ${dmg}の ダメージ！`], next);
+    const pages = [`${m.name}の 必殺！ 稲妻斬り！`, `${foe.name}に ${dmg}の ダメージ！`];
+    dealFoe(foe, dmg, pages);
+    msg(pages, next);
     return;
   }
   msg([`${m.name}の 攻撃！`], () => {
-    const base = atkOf(m) - Math.floor(battle.en.def / 2);
+    const foe = pickFoe();
+    const base = atkOf(m) - Math.floor(foe.en.def / 2);
     const dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
     if (dmg <= 0) {
       msg(["ミス！ ダメージを 与えられない！"], next);
-    } else {
-      battle.ehp -= dmg; battle.enFlash = 16;
-      battle.slash = 18; battle.slashX = false;
-      battle.slashHue = hero.blessed ? 'gold' : 'white';
-      seSlash();
-      msg([`${battle.name}に ${dmg}の ダメージ！`], next);
+      return;
     }
+    battle.slash = 18; battle.slashX = false;
+    battle.slashHue = hero.blessed ? 'gold' : 'white';
+    seSlash();
+    const pages = [`${foe.name}に ${dmg}の ダメージ！`];
+    dealFoe(foe, dmg, pages);
+    msg(pages, next);
   });
 }
-function enemyAct() {
-  battle.mode = 'wait';
-  const en = battle.en;
+function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
+  if (k === 0) battle.mode = 'wait';
+  if (k >= battle.foes.length) { battle.mode = 'cmd'; return; }
+  const foe = battle.foes[k];
+  if (foe.hp <= 0) { enemyActAt(k + 1); return; }
+  const en = foe.en;
   if (en.flee && Math.random() < en.flee) {
-    msg([`${battle.name}は 逃げ出した！`], () => endBattle());
+    foe.hp = 0; foe.fled = true;
+    msg([`${foe.name}は 逃げ出した！`], () => {
+      if (aliveFoes().length === 0) winOrEnd();
+      else enemyActAt(k + 1);
+    });
     return;
   }
   const targets = allAllies().filter(a => a.hp > 0);
   const t = targets[Math.floor(Math.random() * targets.length)];
+  const after = () => afterEnemy(t, k);
   let act = 'atk';
   if (en.spell && Math.random() < 0.35) act = 'spark';
   if (en.breath && Math.random() < 0.35) act = 'fire';
   if (act === 'spark') {
     seSpark(); battle.fx = 14;
-    const dmg = en.boss ? randInt(14, 24) : randInt(4, 9);
+    const dmg = en.trueBoss ? randInt(20, 32) : en.boss ? randInt(14, 24) : randInt(4, 9);
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}は スパークを 唱えた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], () => afterEnemy(t));
+    msg([`${foe.name}は ${en.trueBoss ? '闇の稲妻を 放った' : 'スパークを 唱えた'}！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
     return;
   }
   if (act === 'fire') {
     seSpark(); battle.fx = 14;
-    const dmg = en.boss ? randInt(16, 28) : randInt(6, 11);
+    const dmg = en.trueBoss ? randInt(24, 38) : en.boss ? randInt(16, 28) : randInt(6, 11);
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}は ${en.boss ? '地獄の炎' : '炎'}を はいた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], () => afterEnemy(t));
+    msg([`${foe.name}は ${en.trueBoss ? '漆黒の業火' : en.boss ? '地獄の炎' : '炎'}を はいた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
     return;
   }
   const base = en.atk - Math.floor(dfnOf(t) / 2);
   const dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
   if (dmg <= 0) {
-    msg([`${battle.name}の 攻撃！`, `ミス！ ${t.name}は ダメージを 受けない！`], () => afterEnemy(t));
+    msg([`${foe.name}の 攻撃！`, `ミス！ ${t.name}は ダメージを 受けない！`], after);
   } else {
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}の 攻撃！`, `${t.name}は ${dmg}の ダメージを 受けた！`], () => afterEnemy(t));
+    msg([`${foe.name}の 攻撃！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
   }
 }
-function afterEnemy(t) {
+function afterEnemy(t, k) {
   if (hero.hp <= 0) { hero.hp = 0; died(); return; }
   if (t && t !== hero && t.hp <= 0) {
     t.hp = 0;
-    msg([`${t.name}は 力尽きた！`], () => { battle.mode = 'cmd'; });
+    msg([`${t.name}は 力尽きた！`], () => enemyActAt(k + 1));
     return;
   }
-  battle.mode = 'cmd';
+  enemyActAt(k + 1);
 }
 function tryRun() {
   battle.mode = 'wait';
   msg([`${hero.name}${party.length ? 'たち' : ''}は 逃げ出した！`], () => {
-    const p = clamp(0.55 + (LVT[hero.lv].agi - battle.en.agi) * 0.03, 0.25, 0.95);
+    const maxAgi = Math.max(...aliveFoes().map(f => f.en.agi));
+    const p = clamp(0.55 + (LVT[hero.lv].agi - maxAgi) * 0.03, 0.25, 0.95);
     if (Math.random() < p) endBattle();
-    else msg(["しかし 回り込まれて しまった！"], () => enemyAct());
+    else msg(["しかし 回り込まれて しまった！"], () => enemyActAt(0));
   });
 }
 function victory() {
   seVictory();
-  const g = Math.max(1, Math.round(battle.en.gold * (0.8 + Math.random() * 0.4)));
+  const kills = battle.foes.filter(f => !f.fled);
+  const exp = kills.reduce((s, f) => s + f.en.exp, 0);
+  const g = Math.max(1, Math.round(kills.reduce((s, f) => s + f.en.gold, 0) * (0.8 + Math.random() * 0.4)));
   hero.gold += g;
-  hero.exp += battle.en.exp;
-  const isBoss = battle.en.boss;
-  const isTame = battle.en.tame;
-  msg([`${battle.name}を 倒した！`,
-       `経験値 ${battle.en.exp}ポイント 獲得！\n${g}ゴールドを 手に入れた！`],
-      () => levelChain(isBoss ? bossVictory : isTame ? tameVictory : endBattle));
+  hero.exp += exp;
+  const isBoss = kills.some(f => f.en.boss);
+  const isTame = kills.some(f => f.en.tame);
+  const isTrue = kills.some(f => f.en.trueBoss);
+  msg([battle.foes.length > 1 ? "敵を すべて 打ち破った！" : "戦いに 勝利した！",
+       `経験値 ${exp}ポイント 獲得！\n${g}ゴールドを 手に入れた！`],
+      () => levelChain(isTrue ? trueVictory : isBoss ? bossVictory : isTame ? tameVictory : endBattle));
+}
+function trueVictory() {
+  if (!hero.trueCleared) syncCounter('true-clears', true);  // 初回の裏ボス討伐をカウント
+  hero.trueCleared = true;
+  battle = null;
+  state = 'field';
+  noEncUntil = tick + 180;
+  setTrack(map.track);
+  seVictory();
+  msg(["ゾウユウの 頭脳から ひかりが あふれ…\nその体は 静かに 崩れ落ちた。",
+       "『……エラー。 計算に なかった……\n　人の心は…… 解析 不能……』",
+       "世界を 書き換える 闇は 完全に 消え去り\n本当の 平和が 訪れた！",
+       "🏆 真のエンディング！\nあなたこそ 本当の 英雄だ！"]);
 }
 function tameVictory() {
   battle = null;
@@ -1957,7 +2063,7 @@ function tameVictory() {
   });
 }
 function bossVictory() {
-  if (!hero.cleared) syncClearCount(true);  // 初回クリアをカウント
+  if (!hero.cleared) syncCounter('clears', true);  // 初回クリアをカウント
   hero.cleared = true;
   battle = null;
   state = 'field';
@@ -2025,7 +2131,7 @@ function update() {
   }
   if (battle) {  // 戦闘エフェクトはメッセージ中でも進める(残りっぱなし防止)
     if (battle.shake > 0) battle.shake--;
-    if (battle.enFlash > 0) battle.enFlash--;
+    for (const f of battle.foes) { if (f.flash > 0) f.flash--; }
     if (battle.fx > 0) battle.fx--;
     if (battle.slash > 0) battle.slash--;
     if (battle.bolt > 0) battle.bolt--;
@@ -2214,6 +2320,24 @@ function drawChara(e, cam) {
     // つの
     r(4, 0, 2, 3, '#e8d8c0'); r(18, 0, 2, 3, '#e8d8c0');
     r(4, 0, 2, 1, '#fff8e8'); r(18, 0, 2, 1, '#fff8e8');
+  } else if (kind === 'zouyu') {
+    // 黒ずくめの エンジニアの からだ
+    r(5, 12, 14, 6, p.cloth);
+    r(5, 12, 5, 4, 'rgba(255,255,255,0.06)');
+    r(3, 12, 2, 5, p.cloth); r(19, 12, 2, 5, p.cloth);
+    r(3, 16, 2, 2, '#d8b090'); r(19, 16, 2, 2, '#d8b090');  // 手
+    r(5, 17, 14, 1, 'rgba(0,0,0,0.4)');
+    legs(p.legs, 'rgba(0,0,0,0.4)');
+    // AIの のうみそ頭
+    r(6, 1, 12, 9, '#e890b8');
+    r(7, 0, 10, 1, '#f0a8c8');
+    r(5, 3, 1, 5, '#e890b8'); r(18, 3, 1, 5, '#e890b8');
+    r(8, 1, 1, 4, '#c06890'); r(12, 0, 1, 5, '#c06890'); r(15, 2, 1, 4, '#c06890');  // のうのシワ
+    const on = Math.floor(tick / 9) % 2;  // 回路の明滅
+    r(7, 4, 1, 1, on ? '#50e8f0' : '#1a6870'); r(11, 2, 1, 1, on ? '#1a6870' : '#50e8f0');
+    r(14, 5, 1, 1, on ? '#50e8f0' : '#1a6870'); r(9, 7, 1, 1, on ? '#1a6870' : '#50e8f0');
+    r(16, 7, 1, 1, on ? '#50e8f0' : '#1a6870');
+    if (d !== 'up') { r(8, 9, 2, 2, '#ff3030'); r(14, 9, 2, 2, '#ff3030'); }  // 赤いまなこ
   } else if (kind === 'demon') {
     // マント
     r(4, 12, 16, 9, p.cloth);
@@ -2458,14 +2582,22 @@ function drawBattle() {
     }
   }
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath(); ctx.ellipse(SX + SW / 2, SY + 295, 95, 18, 0, 0, Math.PI * 2); ctx.fill();
-  const visible = !(battle.enFlash > 0 && tick % 4 < 2) && battle.ehp > 0;
-  if (visible) drawArt(ART[battle.en.art], SX + SW / 2 - 80, SY + 138, 10, battle.en.pal);
+  const offs = FOE_OFFS[battle.foes.length];
+  battle.foes.forEach((f, i) => {
+    if (f.hp <= 0) return;
+    const scl = (f.en.boss || f.en.trueBoss || battle.foes.length === 1) ? 10 : 8;
+    const ex = SX + SW / 2 + offs[i];
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(ex, SY + 295, scl * 9, 16, 0, 0, Math.PI * 2); ctx.fill();
+    if (!(f.flash > 0 && tick % 4 < 2)) {
+      drawArt(ART[f.en.art], ex - scl * 8, SY + 298 - scl * 16, scl, f.en.pal);
+    }
+  });
   if (battle.slash > 0) {  // 斬撃エフェクト(ズシャッ)
     const gold = battle.slashHue === 'gold';
     const dur = battle.slashX ? 24 : 18;
     const p = 1 - battle.slash / dur;
-    const cx = SX + SW / 2, cy = SY + 212;
+    const cx = SX + SW / 2 + (battle.fxX || 0), cy = SY + 212;
     const lines = gold ? 4 : 3;
     const drawSlash = sign => {
       ctx.save();
@@ -2507,7 +2639,7 @@ function drawBattle() {
     }
   }
   if (battle.bolt > 0) {  // 稲妻
-    const cx = SX + SW / 2, cy = SY + 215;
+    const cx = SX + SW / 2 + (battle.fxX || 0), cy = SY + 215;
     const t = 20 - battle.bolt;
     if (battle.bolt > 14 && tick % 2) {  // 直撃の白フラッシュ
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -2556,13 +2688,22 @@ function drawBattle() {
     text(a.mp + '/' + maxMpOf(a), 204, wy + (compact ? 62 : 86), fs, '#fff', 'right');
   });
 
-  if (battle.mode === 'cmd' || battle.mode === 'spell' || battle.mode === 'item') {
+  if (battle.mode === 'cmd' || battle.mode === 'spell' || battle.mode === 'item' || battle.mode === 'target') {
     drawWindow(28, 420, 230, 4 * 44 + 40);
     BCMDS.forEach((c, i) => {
       const me = battle.mode === 'cmd' && i === battle.sel;
       if (me) text('▶', 50, 446 + i * 44, 22, '#ffd860');
       text(c, 84, 446 + i * 44, 22, me ? '#ffd860' : '#fff');
     });
+    if (battle.mode === 'target') {  // ねらう敵を えらぶ
+      const a = aliveFoes();
+      drawWindow(270, 420, 320, a.length * 44 + 40);
+      a.forEach((f, i) => {
+        const me = i === battle.tsel;
+        if (me) text('▶', 292, 446 + i * 44, 22, '#ffd860');
+        text(f.name, 326, 446 + i * 44, 22, me ? '#ffd860' : '#fff');
+      });
+    }
     if (battle.mode === 'spell') {
       const sp = learnedSpells();
       drawWindow(270, 420, 320, sp.length * 44 + 40);
@@ -2651,8 +2792,11 @@ function draw() {
   }
   ctx.fillStyle = 'rgba(0,0,0,0.05)';
   for (let y = 0; y < cv.height; y += 4) ctx.fillRect(0, y, cv.width, 1);
-  if (clearCount !== null) {
-    text(`クリア者数 ${clearCount}人`, cv.width - 14, cv.height - 48, 15, 'rgba(255,232,120,0.55)', 'right');
+  if (counters['true-clears'] !== null) {
+    text(`裏ボス討伐 ${counters['true-clears']}人`, cv.width - 14, cv.height - 70, 15, 'rgba(255,120,160,0.6)', 'right');
+  }
+  if (counters.clears !== null) {
+    text(`クリア者数 ${counters.clears}人`, cv.width - 14, cv.height - 48, 15, 'rgba(255,232,120,0.55)', 'right');
   }
   text('version ' + VERSION, cv.width - 14, cv.height - 26, 15, 'rgba(255,255,255,0.45)', 'right');
 }

@@ -105,6 +105,7 @@ for (const name of Object.keys(H.ENEMIES)) {
   H.hero.lv = 8;   // 強敵にも勝てるレベルで終局を検証
   H.hero.hp = 999; // 検証用に死なない体力(内部値だけ)
   H.hero.weapon = '銅の剣';
+  H.party.forEach(m => { m.hp = 999; m.mp = 99; });  // 途中で加わった仲間も回復
   H.startBattle(name, 'grass');
   let guard = 0;
   while (H.getState() === 'battle' && guard < 8000) {
@@ -115,6 +116,7 @@ for (const name of Object.keys(H.ENEMIES)) {
   ok(H.getState() !== 'battle', `${name} 戦が終局 (${guard}フレーム)`);
 }
 ok(H.hero.cleared === true, '魔王討伐でクリアフラグが立つ');
+ok(H.hero.trueCleared === true, 'ゾウユウ討伐で真クリアフラグが立つ');
 ok(H.party.some(m => m.job === 'dragon'), 'ドラゴン戦の勝利でドラゴンが仲間に');
 for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); } // クリアメッセージを閉じる
 tryDraw('クリア後の町(パレード+紙吹雪)描画', () => { H.teleport('town', 9, 11); frames(30); });
