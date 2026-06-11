@@ -224,7 +224,7 @@ tryDraw('蒼竜つきでフィールド描画', () => { H.teleport('town', 9, 11
 
 // ---- 9.7 ラーメン屋に歩いて入店できる(回帰テスト) ----
 console.log('# ラーメン屋入店テスト');
-for (let i = 0; i < 8; i++) { H.press('KeyZ'); frames(10); }  // 残っているメッセージを閉じ切る
+for (let i = 0; i < 24; i++) { H.press('KeyZ'); frames(10); }  // 実績通知含むメッセージを閉じ切る
 H.hero.cleared = true;
 H.teleport('world', 20, 24);
 H.setKey('ArrowUp', true);
@@ -262,18 +262,42 @@ ok(H.hero.gold >= 1000, '全滅ではないのでゴールドが半減しない 
 ok(H.hero.hp >= 1, '戦闘後に勇者は立ち上がる (hp=' + H.hero.hp + ')');
 for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); }
 
+// ---- 9.9 エンディングロール ----
+console.log('# エンディングロールテスト');
+H.teleport('town', 9, 12);  // NPCのいない場所でメッセージを閉じ切る(店主の前でZ連打しない)
+for (let i = 0; i < 14; i++) { H.press('KeyZ'); frames(10); }
+H.hero.trueCleared = true;
+delete H.hero.ach.endroll;
+H.teleport('town', 9, 13);
+H.setKey('ArrowDown', true);
+frames(60);  // (9,14)へ歩く → フェード → ロール開始
+H.setKey('ArrowDown', false);
+ok(H.getState() === 'endroll', '町を出るとエンディングロールが始まる (state=' + H.getState() + ')');
+tryDraw('エンディングロール描画', () => frames(30));
+H.setKey('KeyZ', true);  // 早送り
+guard = 0;
+while (H.getState() === 'endroll' && guard < 3000) { rafCb(); guard++; }
+H.setKey('KeyZ', false);
+frames(40);
+ok(H.getState() === 'field', 'ロール終了後フィールドへ戻る');
+ok(H.getMap() === 'world', 'ワールドマップへ出る (map=' + H.getMap() + ')');
+ok(H.hero.ach.endroll === true, 'やりこみ度+1(エンディングロールをみた)');
+for (let i = 0; i < 6; i++) { H.press('KeyZ'); frames(10); }  // 実績通知を閉じる
+
 // ---- 10. 強くてニューゲーム ----
 console.log('# 強くてニューゲーム');
 H.hero.trueCleared = true; H.hero.cleared = true;
 H.hero.lv = 9; H.hero.gold = 5000; H.hero.weapon = '神の剣';
-const partySizeBefore = H.party.length;
+if (!H.party.some(m => m.job === 'dragon')) H.party.push(H.makeCompanion('dragon'));
+const nonDragonBefore = H.party.filter(m => m.job !== 'dragon').length;
 H.ngPlus();
 frames(30);
-for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); }
+for (let i = 0; i < 6; i++) { H.press('KeyZ'); frames(10); }
 ok(H.hero.cleared === false && H.hero.trueCleared === false, '物語フラグがリセットされる');
 ok(H.hero.lap === 2, '2周目になる (lap=' + H.hero.lap + ')');
 ok(H.hero.lv === 9 && H.hero.gold === 5000 && H.hero.weapon === '神の剣', 'レベル・ゴールド・装備を引き継ぐ');
-ok(H.party.length === partySizeBefore, '仲間を引き継ぐ');
+ok(!H.party.some(m => m.job === 'dragon'), 'ドラゴンは洞窟へ帰る(再勧誘が必要)');
+ok(H.party.length === nonDragonBefore, 'ドラゴン以外の仲間は引き継ぐ');
 ok(H.player.tx === 9 && H.player.ty === 11, '町の開始地点に戻る');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} 件失敗`);
