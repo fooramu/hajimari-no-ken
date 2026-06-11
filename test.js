@@ -170,6 +170,30 @@ ok(H.hero.weapon === '神の剣', '勇者に神の剣 (weapon=' + H.hero.weapon 
 tryDraw('覚醒後の見た目で描画', () => { H.teleport('town', 9, 11); frames(20); });
 tryDraw('覚醒後のメニュー描画', () => { H.press('KeyX'); frames(10); H.press('KeyX'); frames(5); });
 
+// ---- 8.7 ゾウユウ敗北 → 神殿の第二覚醒 ----
+console.log('# 第二覚醒テスト');
+const savedParty = H.party.splice(0);  // 一時的にソロへ
+H.hero.lv = 1; H.hero.hp = 1; H.hero.gold = 100;
+H.startBattle('ゾウユウ', 'cyber');
+guard = 0;
+while (H.getState() === 'battle' && guard < 5000) {
+  if (guard % 15 === 0) H.press('KeyZ');
+  rafCb();
+  guard++;
+}
+frames(60);
+for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); }
+ok(H.hero.zouyuLost === true, 'ゾウユウ敗北でフラグが立つ');
+H.party.push(...savedParty);
+H.hero.lv = 8;
+H.teleport('temple', 4, 3);
+H.player.dir = 'up';
+H.press('KeyZ'); frames(5);
+for (let i = 0; i < 12; i++) { H.press('KeyZ'); frames(15); }
+ok(H.hero.blessed2 === true, '神殿で第二覚醒 (blessed2)');
+ok(H.hero.weapon === '終焉の剣', '勇者に終焉の剣 (weapon=' + H.hero.weapon + ')');
+tryDraw('第二覚醒の見た目で描画', () => { H.teleport('town', 9, 11); frames(20); });
+
 // ---- 9. セーブゾーン(魔法陣) ----
 console.log('# セーブゾーンテスト');
 ok(H.MAPS.town.grid[13][11] === 's', '町の入り口ちかくに 魔法陣 (11,13)');

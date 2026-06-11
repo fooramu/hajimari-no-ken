@@ -1026,6 +1026,13 @@ const MAPS = {
       // ---- クリア後にだけ 現れる 真の裏ボス ----
       { tx:17, ty:1, dir:'down', secret:true, trueBoss:'ゾウユウ', sprite:'zouyu',
         pal:{hair:'#16161e',skin:'#1e1e28',cloth:'#14181e',legs:'#0a0c10'} },
+      // ---- ゾウユウに敗れた後、左上に現れる 脳化を免れた男の子 ----
+      { tx:2, ty:1, dir:'down', lostHint:true, human:true, wander:true,
+        pal:{hair:'#3a2a18',skin:'#ffe0c0',cloth:'#e8a030',legs:'#3868d8'},
+        lines:["おにいちゃんたち ボロボロだね…\nゾウユウに 負けちゃったんでしょ？",
+               "ぼくは 隠れてたから\n頭を 書き換えられなかったんだ。",
+               "ねえ 知ってる？ 西の果ての 神殿の 神さま…\n『敗北を 知った 魂こそ さらに 強くなれる』\nって つぶやいてたよ。",
+               "もう一度 神殿に 行ってみなよ！\nきっと もっと すごい力を くれるはずだよ！"] },
     ],
   },
   weapon: {
@@ -1238,7 +1245,8 @@ const npcGone = n => (n.recruit && party.some(m => m.job === n.recruit))
   || (n.tame && party.some(m => m.job === n.tame))
   || (n.boss && hero.cleared)
   || (n.parade && !hero.cleared)  // パレードはクリア後だけ現れる
-  || (n.secret && (!hero.cleared || hero.trueCleared));  // 真ボスはクリア後〜討伐まで
+  || (n.secret && (!hero.cleared || hero.trueCleared))  // 真ボスはクリア後〜討伐まで
+  || (n.lostHint && (!hero.zouyuLost || hero.trueCleared));  // 男の子はゾウユウ敗北後〜討伐まで
 function entityAt(x, y) {
   for (const n of map.npcs) if (!npcGone(n) && n.tx === x && n.ty === y) return n;
   return null;
@@ -1270,7 +1278,7 @@ const LVT = [null,
   {exp:2000, hp:54, mp:40, str:35, agi:31},
 ];
 const MAXLV = 10;
-const WEAPONS = { "ひのきの棒":{atk:2}, "こん棒":{atk:4}, "銅の剣":{atk:10}, "神の剣":{atk:25} };
+const WEAPONS = { "ひのきの棒":{atk:2}, "こん棒":{atk:4}, "銅の剣":{atk:10}, "神の剣":{atk:25}, "終焉の剣":{atk:45} };
 const ARMORS  = { "旅の服":{def:4} };
 const SHIELDS = { "皮の盾":{def:4} };
 const ITEMS   = { "薬草":{use:'heal'}, "毒消し草":{use:'none'}, "聖水":{use:'none'}, "キメラの翼":{use:'wing'} };
@@ -1280,6 +1288,7 @@ const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? '
 const hero = {
   name:'勇者', lv:1, exp:0, hp:16, mp:0, gold:120,
   weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false, trueCleared:false, lap:1, dragonEvolved:false,
+  blessed2:false, zouyuLost:false,
   pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
 };
 const maxHp = () => LVT[hero.lv].hp;
@@ -1294,6 +1303,7 @@ const JOBS = {
     name:'ガロン', label:'戦士', atkBonus:4, defBonus:6,
     gear:'バトルアクス・鉄の鎧',
     blessedAtk:16, blessedGear:'雷神の斧・ミスリルの鎧',
+    blessed2Atk:32, blessed2Gear:'滅竜の戦斧・覇王の鎧',
     pal:{ hair:'#7a2818', skin:'#e8b878', cloth:'#b03828', legs:'#583020' },
     lvt:[null,
       {hp:20,mp:0,str:6, agi:3}, {hp:26,mp:0,str:8, agi:4}, {hp:30,mp:0,str:11,agi:5},
@@ -1307,6 +1317,7 @@ const JOBS = {
     name:'ミリア', label:'魔法使い', atkBonus:1, defBonus:2, caster:true,
     gear:'樫の杖・布のローブ',
     blessedAtk:10, blessedGear:'賢者の杖・精霊のローブ',
+    blessed2Atk:22, blessed2Gear:'創世の杖・星詠みのローブ',
     pal:{ hair:'#5038b8', skin:'#f0d8b8', cloth:'#7a50d0', legs:'#4a3090' },
     lvt:[null,
       {hp:12,mp:8, str:2, agi:5}, {hp:15,mp:12,str:3, agi:7}, {hp:17,mp:16,str:4, agi:10},
@@ -1334,12 +1345,16 @@ const maxHpOf = a => a === hero ? maxHp() : JOBS[a.job].lvt[hero.lv].hp;
 const maxMpOf = a => a === hero ? maxMp() : JOBS[a.job].lvt[hero.lv].mp;
 const isBlueDragon = a => a.job === 'dragon' && hero.dragonEvolved;
 const atkOf = a => a === hero ? atk()
-  : JOBS[a.job].lvt[hero.lv].str + JOBS[a.job].atkBonus + (hero.blessed ? JOBS[a.job].blessedAtk : 0)
+  : JOBS[a.job].lvt[hero.lv].str + JOBS[a.job].atkBonus
+    + (hero.blessed2 && JOBS[a.job].blessed2Atk ? JOBS[a.job].blessed2Atk
+       : hero.blessed ? JOBS[a.job].blessedAtk : 0)
     + (isBlueDragon(a) ? 10 : 0);
 const dfnOf = a => a === hero ? dfn()
-  : Math.floor(JOBS[a.job].lvt[hero.lv].agi / 2) + JOBS[a.job].defBonus + (hero.blessed ? 6 : 0)
+  : Math.floor(JOBS[a.job].lvt[hero.lv].agi / 2) + JOBS[a.job].defBonus
+    + (hero.blessed2 ? 12 : hero.blessed ? 6 : 0)
     + (isBlueDragon(a) ? 5 : 0);
 const gearOf = m => isBlueDragon(m) ? '蒼神の爪・伝説の竜鱗'
+  : (hero.blessed2 && JOBS[m.job].blessed2Gear) ? JOBS[m.job].blessed2Gear
   : hero.blessed ? JOBS[m.job].blessedGear : JOBS[m.job].gear;
 function makeCompanion(job) {
   const j = JOBS[job];
@@ -1471,7 +1486,7 @@ function save() {
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
       cleared:hero.cleared, blessed:hero.blessed, trueCleared:hero.trueCleared, lap:hero.lap,
-      dragonEvolved:hero.dragonEvolved,
+      dragonEvolved:hero.dragonEvolved, blessed2:hero.blessed2, zouyuLost:hero.zouyuLost,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
       pos: { map:mapId, x:player.tx, y:player.ty },
     }));
@@ -1490,6 +1505,8 @@ function loadSave() {
     hero.trueCleared = !!d.trueCleared;
     hero.lap = d.lap || 1;
     hero.dragonEvolved = !!d.dragonEvolved;
+    hero.blessed2 = !!d.blessed2;
+    hero.zouyuLost = !!d.zouyuLost;
     // 旧バージョンのかな表記アイテムを漢字名へ移行
     const RENAMES = {
       'ひのきのぼう':'ひのきの棒', 'こんぼう':'こん棒', 'どうのつるぎ':'銅の剣',
@@ -1523,7 +1540,7 @@ function newGame() {
   hero.weapon = 'ひのきの棒';
   hero.armor = hero.shield = null;
   hero.inv = {}; hero.cleared = false; hero.blessed = false; hero.trueCleared = false; hero.lap = 1;
-  hero.dragonEvolved = false;
+  hero.dragonEvolved = false; hero.blessed2 = false; hero.zouyuLost = false;
   party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
@@ -1668,6 +1685,28 @@ function interact() {
   }
 }
 function godTalk() {
+  if (hero.blessed2) {
+    msg(["これ以上の 力は 神にも 授けられぬ…\n後は 汝らの 心の 強さのみよ。"]);
+    return;
+  }
+  if (hero.blessed && hero.zouyuLost) {  // ゾウユウに敗れた者への 追加覚醒
+    msg(["……また 力が ほしいのか。\n仕方が ないのう……",
+         "じゃが その敗北 決して 無駄では ない。\n打ちのめされた 魂こそ\n何よりも 硬く 研ぎ澄まされる。",
+         "受け取るが よい！\n神器の…… 真の姿を！"], () => {
+      hero.blessed2 = true;
+      if (hero.weapon) addInv(hero.weapon);
+      hero.weapon = '終焉の剣';
+      seThunder();
+      startFade(null, () => {
+        seLevelUp();
+        msg(["天が 裂け 白き光が 降り注ぐ…！",
+             `${hero.name}は 終焉の剣を 授かった！\n${JOBS.warrior.name}は 滅竜の戦斧！\n${JOBS.mage.name}は 創世の杖！`,
+             "３人は 神をも超える 姿へと 進化した！",
+             "「ゆけ。 今度こそ 闇を 断ち切るのじゃ」"]);
+      });
+    });
+    return;
+  }
   if (hero.blessed) {
     msg(["汝らに 授けし力は\n世界を 照らす 光と ならん…"]);
     return;
@@ -2026,7 +2065,7 @@ function heroAttack(foe) {
     }
     battle.slash = crit ? 24 : 18;
     battle.slashX = crit;
-    battle.slashHue = hero.blessed ? 'gold' : 'white';
+    battle.slashHue = hero.blessed2 ? 'plat' : hero.blessed ? 'gold' : 'white';
     seSlash();
     const critName = hero.blessed ? "必殺！ シャイニングスラッシュ！！" : "会心の一撃！！";
     const pages = crit ? [critName] : [];
@@ -2162,7 +2201,7 @@ function companionsAct(i) {  // 仲間は じどうで 戦う
       return;
     }
     battle.slash = 18; battle.slashX = false;
-    battle.slashHue = hero.blessed ? 'gold' : 'white';
+    battle.slashHue = hero.blessed2 ? 'plat' : hero.blessed ? 'gold' : 'white';
     seSlash();
     const pages = [`${foe.name}に ${dmg}の ダメージ！`];
     dealFoe(foe, dmg, pages);
@@ -2360,6 +2399,7 @@ function endBattle() {
   setTrack(map.track);
 }
 function died() {
+  if (battle && battle.foes.some(f => f.en.trueBoss)) hero.zouyuLost = true;  // 神殿の追加覚醒が解放
   msg(["一行は 全滅した…\n目の前が 真っ暗に なった…"], () => {
     hero.gold = Math.floor(hero.gold / 2);
     hero.hp = maxHp(); hero.mp = maxMp();
@@ -2449,8 +2489,8 @@ function drawChara(e, cam) {
   };
   const kind = e.sprite || (e === player ? 'hero' : 'villager');
   const bl = hero.blessed && (kind === 'hero' || kind === 'warrior' || kind === 'mage');
-  if (bl) {  // 燃えあがる 金のオーラ
-    ctx.fillStyle = 'rgba(255,216,72,0.18)';
+  if (bl) {  // 燃えあがる オーラ(第二覚醒で 白蒼に)
+    ctx.fillStyle = hero.blessed2 ? 'rgba(140,220,255,0.2)' : 'rgba(255,216,72,0.18)';
     ctx.beginPath();
     ctx.ellipse(x + 12 * u, y + 11 * u + bob, 13 * u, 14 * u, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2459,27 +2499,30 @@ function drawChara(e, cam) {
       [[0,8,2,11],[22,5,2,12],[2,2,2,5],[20,-1,2,5],[6,-4,2,5],[16,-4,2,4],[11,-4,2,4],[1,14,2,6],[21,17,2,4]],
       [[0,6,2,13],[22,6,2,13],[2,-2,2,6],[20,2,2,4],[4,-2,2,4],[18,-3,2,5],[10,-6,2,5],[13,-4,2,4],[1,17,2,4],[21,14,2,5]],
     ];
+    const fc1 = hero.blessed2 ? 'rgba(120,210,255,0.55)' : 'rgba(255,196,40,0.5)';
+    const fc2 = hero.blessed2 ? 'rgba(240,252,255,0.75)' : 'rgba(255,244,160,0.65)';
     for (const [fx, fy, fw, fh] of FLAMES[Math.floor(tick / 4) % 3]) {
-      r(fx, fy, fw, fh, 'rgba(255,196,40,0.5)');
-      r(fx, fy, fw, 2, 'rgba(255,244,160,0.65)');
+      r(fx, fy, fw, fh, fc1);
+      r(fx, fy, fw, 2, fc2);
     }
   }
   if (kind === 'hero') {
-    // マント(覚醒で 白銀に)
-    const cape = bl ? '#f0f0f8' : '#b02828';
+    // マント(覚醒で白銀、第二覚醒で蒼白)
+    const bl2 = hero.blessed2;
+    const cape = bl2 ? '#9ae0ff' : bl ? '#f0f0f8' : '#b02828';
     if (d === 'up') r(5, 12, 14, 8, cape);
     else if (d === 'left') r(17, 12, 3, 7, cape);
     else if (d === 'right') r(4, 12, 3, 7, cape);
     else { r(3, 12, 2, 7, cape); r(19, 12, 2, 7, cape); }
     // 全身よろい(覚醒で 黄金に)
-    const ab = bl ? '#e0b438' : '#3464d4';  // 基本色
-    const al = bl ? '#f8e088' : '#6a94f0';  // ハイライト
-    const ad = bl ? '#a07818' : '#22429e';  // 影
-    const tr2 = bl ? '#ffffff' : '#ffd860'; // ふちどり
+    const ab = bl2 ? '#e8f0fa' : bl ? '#e0b438' : '#3464d4';  // 基本色
+    const al = bl2 ? '#ffffff' : bl ? '#f8e088' : '#6a94f0';  // ハイライト
+    const ad = bl2 ? '#9ab4cc' : bl ? '#a07818' : '#22429e';  // 影
+    const tr2 = bl2 ? '#50d8f0' : bl ? '#ffffff' : '#ffd860'; // ふちどり
     r(5, 12, 14, 6, ab);
     r(5, 12, 5, 3, al);
     r(5, 15, 14, 1, ad);
-    r(11, 13, 2, 2, bl ? '#50d8f0' : '#ffd860');   // むねの紋章
+    r(11, 13, 2, 2, bl2 ? '#ffd860' : bl ? '#50d8f0' : '#ffd860');   // むねの紋章
     r(5, 17, 14, 1, ad); r(11, 17, 2, 1, tr2);
     r(2, 11, 4, 4, ab); r(2, 11, 4, 1, tr2);       // かたあて
     r(18, 11, 4, 4, ab); r(18, 11, 4, 1, tr2);
@@ -2490,18 +2533,19 @@ function drawChara(e, cam) {
     else { r(7, 7, 10, 4, p.skin); eyes(8, '#201810'); }
     r(6, 7, 1, 4, ab); r(17, 7, 1, 4, ab);         // ほおあて
     // つばさかざりの かぶと
-    r(6, 1, 12, 2, bl ? '#f0c848' : '#3a6ae0');
-    r(5, 3, 14, 3, bl ? '#f0c848' : '#3a6ae0');
+    r(6, 1, 12, 2, bl2 ? '#f4f8ff' : bl ? '#f0c848' : '#3a6ae0');
+    r(5, 3, 14, 3, bl2 ? '#f4f8ff' : bl ? '#f0c848' : '#3a6ae0');
     r(5, 5, 14, 1, tr2);
     r(8, 1, 6, 1, al);
-    r(10, 0, 4, 1, bl ? '#50d8f0' : '#e84040');    // とさか(覚醒で 蒼く)
+    r(10, 0, 4, 1, bl2 ? '#ffffff' : bl ? '#50d8f0' : '#e84040');    // とさか
     r(3, 1, 2, 4, tr2); r(2, 2, 1, 2, tr2);        // つばさ
     r(19, 1, 2, 4, tr2); r(21, 2, 1, 2, tr2);
   } else if (kind === 'warrior') {
-    // よろい(覚醒で 黒鋼に)
-    const wb = bl ? '#4a5468' : '#9aa4b8';
-    const wl = bl ? '#6a7488' : '#c8d0e0';
-    const wd = bl ? '#323a4c' : '#7a8498';
+    // よろい(覚醒で黒鋼、第二覚醒で深紅の覇王鎧)
+    const wbl2 = hero.blessed2;
+    const wb = wbl2 ? '#7a1830' : bl ? '#4a5468' : '#9aa4b8';
+    const wl = wbl2 ? '#a83048' : bl ? '#6a7488' : '#c8d0e0';
+    const wd = wbl2 ? '#4a0e1e' : bl ? '#323a4c' : '#7a8498';
     r(5, 12, 14, 6, wb);
     r(5, 12, 5, 3, wl);
     r(5, 15, 14, 1, wd);
@@ -2519,20 +2563,21 @@ function drawChara(e, cam) {
     r(5, 5, 14, 1, wd);
     r(8, 1, 6, 1, bl ? '#8a94a8' : '#e0e8f0');
     if (bl) r(10, 0, 4, 1, '#e84040');                      // あかい たてがみ
-    const horn = bl ? '#ffd860' : '#e8d8c0';                // 覚醒で 金のつの
+    const horn = wbl2 ? '#ffffff' : bl ? '#ffd860' : '#e8d8c0';  // 第二覚醒で 白銀のつの
     r(3, 0, 2, 3, horn); r(3, 0, 2, 1, bl ? '#fff8d0' : '#fff8e8');
     r(19, 0, 2, 3, horn); r(19, 0, 2, 1, bl ? '#fff8d0' : '#fff8e8');
     // おの(覚醒で いかずちの刃)
     const ax = d === 'left' ? 2 : 20;
     r(ax + 1, 9, 1, 10, bl ? '#3a3448' : '#7a4a20');
-    r(ax, 7, 3, 3, bl ? '#70e8f8' : '#c8ccd8');
+    r(ax, 7, 3, 3, wbl2 ? '#ffffff' : bl ? '#70e8f8' : '#c8ccd8');
     r(ax + (d === 'left' ? 0 : 2), 7, 1, 3, bl ? '#d8f8ff' : '#eef2f8');
     if (bl && Math.floor(tick / 9) % 2) r(ax + 1, 6, 1, 1, '#ffffff');  // 稲妻
   } else if (kind === 'mage') {
-    // ローブ(覚醒で 白い賢者に)
-    const robe = bl ? '#f0eef8' : p.cloth;
-    const hat = bl ? '#f0eef8' : p.hair;
-    const trim = bl ? '#c8a030' : '#3a2890';
+    // ローブ(覚醒で白い賢者、第二覚醒で星詠みの紺)
+    const mbl2 = hero.blessed2;
+    const robe = mbl2 ? '#2a2a68' : bl ? '#f0eef8' : p.cloth;
+    const hat = mbl2 ? '#2a2a68' : bl ? '#f0eef8' : p.hair;
+    const trim = mbl2 ? '#ffd860' : bl ? '#c8a030' : '#3a2890';
     r(5, 12, 14, 6, robe);
     r(4, 18, 16, 2, robe);
     r(5, 12, 5, 5, 'rgba(255,255,255,0.12)');
@@ -2549,6 +2594,11 @@ function drawChara(e, cam) {
     r(7, 4, 10, 1, hat);
     r(4, 5, 16, 1, hat); r(4, 6, 16, 1, trim);
     r(12, 2, bl ? 2 : 1, 1, '#ffd860');
+    if (mbl2) {  // ローブに 星々が またたく
+      const tw = Math.floor(tick / 12) % 2;
+      r(7, 14, 1, 1, tw ? '#ffffff' : '#8ab0ff'); r(15, 16, 1, 1, tw ? '#8ab0ff' : '#ffffff');
+      r(11, 18, 1, 1, '#ffd860'); r(9, 3, 1, 1, tw ? '#ffffff' : '#ffd860');
+    }
     // つえ(覚醒で 金のオーブ)
     const sx = d === 'left' ? 2 : 21;
     r(sx, 6, 1, 12, bl ? '#e8d8c0' : '#8a5c2c');
@@ -2634,7 +2684,7 @@ function drawChara(e, cam) {
     r(3, 16, 2, 2, p.skin); r(19, 16, 2, 2, p.skin);     // て
     r(5, 17, 14, 1, 'rgba(0,0,0,0.3)');
     legs(p.legs, 'rgba(0,0,0,0.3)');
-    if (kind === 'villager' && hero.cleared && !hero.trueCleared) {
+    if (kind === 'villager' && hero.cleared && !hero.trueCleared && !e.human) {
       // 魔王討伐後、町人の頭は ゾウユウに 書き換えられ 脳みそに…
       r(6, 1, 12, 10, '#e890b8');
       r(7, 0, 10, 1, '#f0a8c8');
@@ -2667,7 +2717,13 @@ function drawChara(e, cam) {
 function drawHeldWeapon(r, dir) {
   const n = hero.weapon;
   const vert = x => {  // 縦持ち(きほん きを つけ の よこ)
-    if (n === '神の剣') {
+    if (n === '終焉の剣') {
+      r(x, 0, 1, 2, '#ffffff');
+      r(x, 2, 1, 11, '#bce8ff'); r(x, 3, 1, 8, '#f0fbff');
+      r(x - 1, 13, 3, 1, '#50d8f0');
+      r(x, 14, 1, 4, '#1a2a4a');
+      if (Math.floor(tick / 6) % 2) { r(x - 1, 2, 1, 1, '#ffffff'); r(x + 1, 6, 1, 1, '#9ae0ff'); }
+    } else if (n === '神の剣') {
       r(x, 0, 1, 2, '#ffffff');
       r(x, 2, 1, 11, '#ffe878'); r(x, 3, 1, 8, '#fff8d0');
       r(x - 1, 13, 3, 1, '#ffd860');
@@ -2686,7 +2742,12 @@ function drawHeldWeapon(r, dir) {
     }
   };
   const horiz = (x0, right) => {  // よこ持ち(すすむ ほうこうへ)
-    if (n === '神の剣') {
+    if (n === '終焉の剣') {
+      r(right ? x0 : x0 + 6, 15, 4, 1, '#1a2a4a');
+      r(right ? x0 + 4 : x0 + 5, 14, 1, 3, '#50d8f0');
+      r(right ? x0 + 5 : x0, 15, 5, 1, '#bce8ff');
+      r(right ? x0 + 9 : x0, 15, 1, 1, '#ffffff');
+    } else if (n === '神の剣') {
       r(right ? x0 : x0 + 6, 15, 4, 1, '#3a64d4');
       r(right ? x0 + 4 : x0 + 5, 14, 1, 3, '#ffd860');
       r(right ? x0 + 5 : x0, 15, 5, 1, '#ffe878');
@@ -2943,11 +3004,12 @@ function drawBattle() {
     }
   });
   if (battle.slash > 0) {  // 斬撃エフェクト(ズシャッ)
-    const gold = battle.slashHue === 'gold';
+    const plat = battle.slashHue === 'plat';
+    const gold = battle.slashHue === 'gold' || plat;
     const dur = battle.slashX ? 24 : 18;
     const p = 1 - battle.slash / dur;
     const cx = SX + SW / 2 + (battle.fxX || 0), cy = SY + 212;
-    const lines = gold ? 4 : 3;
+    const lines = plat ? 5 : gold ? 4 : 3;
     const drawSlash = sign => {
       ctx.save();
       ctx.translate(cx, cy);
@@ -2960,9 +3022,9 @@ function drawBattle() {
         const tail = Math.max(-L / 2, head - 80 - 70 * (1 - p));
         const a = Math.max(0, 0.95 - p * 0.85 - i * 0.12);
         if (head <= tail || a <= 0) continue;
-        ctx.fillStyle = gold ? `rgba(255,232,110,${a})` : `rgba(255,255,255,${a})`;
+        ctx.fillStyle = plat ? `rgba(190,235,255,${a})` : gold ? `rgba(255,232,110,${a})` : `rgba(255,255,255,${a})`;
         ctx.fillRect(tail, off - (gold ? 4 : 3), head - tail, gold ? 8 : 6);
-        ctx.fillStyle = gold ? `rgba(255,255,255,${a * 0.8})` : `rgba(255,224,120,${a * 0.7})`;
+        ctx.fillStyle = plat ? `rgba(255,255,255,${a * 0.9})` : gold ? `rgba(255,255,255,${a * 0.8})` : `rgba(255,224,120,${a * 0.7})`;
         ctx.fillRect(tail, off - 1, head - tail, 2);
       }
       ctx.restore();
