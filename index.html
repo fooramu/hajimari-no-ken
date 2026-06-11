@@ -314,125 +314,125 @@ function drawArt(art, x, y, s, pal) {
   }
 }
 const ART = {
-  slime: { pal:{K:'#182850',B:'#3a7cf0',L:'#9cc4ff',D:'#2456b8',W:'#ffffff'}, rows:[
+  pixie: { pal:{K:'#202838',H:'#f8d048',S:'#ffe0c0',D:'#58c8a8',W:'#bce8ff',E:'#3858c8',P:'#f08080'}, rows:[
     "................",
-    "......KKKK......",
-    "....KKBLLBKK....",
-    "...KBLLBBBBBK...",
-    "..KBLBBBBBBBBK..",
-    ".KBBWWKBBKWWBBK.",
-    ".KBBWWKBBKWWBBK.",
-    ".KBBBBBBBBBBBBK.",
-    ".KBBKBBBBBBKBBK.",
-    ".KBBBKKKKKKBBBK.",
-    ".KDBBBBBBBBBBDK.",
-    "..KDBBBBBBBBDK..",
-    "..KKDDBBBBDDKK..",
+    ".....KKKKKK.....",
+    "....KHHHHHHK....",
+    "...KHHHHHHHHK...",
+    ".WW.KSESSESK.WW.",
+    "WWWWKSSPPSSKWWWW",
+    ".WW.KHSSSSHK.WW.",
+    "..W..KDDDDK..W..",
+    ".....KDDDDDK....",
+    "....KDDDDDDK....",
+    ".....KDKKDK.....",
+    ".....KS..SK.....",
+    "....KK....KK....",
+    "................",
+    "................",
+    "................"]},
+  cat: { pal:{K:'#241a20',H:'#c87838',S:'#ffe0c0',E:'#308848',P:'#f08080',D:'#7a4ad0'}, rows:[
+    "................",
+    "..KK......KK....",
+    ".KHHK....KHHK...",
+    ".KHHHKKKKHHHK...",
+    ".KHHHHHHHHHHK...",
+    ".KHSESSSSESHK...",
+    ".KHSSSPPSSSHK...",
+    "..KSSSSSSSSK....",
+    "...KDDDDDDK.....",
+    "..KDDDDDDDDK..K.",
+    "..KDDDDDDDDK.KHK",
+    "...KDDDDDDK..KHK",
+    "...KDKKKKDK...K.",
+    "...KS....SK.....",
+    "..KK......KK....",
+    "................"]},
+  alraune: { pal:{K:'#1c2818',F:'#f070a8',H:'#88c855',S:'#ffe8d0',E:'#c83060',P:'#f08080',G:'#48a050',L:'#a8e070'}, rows:[
+    "....KK..KK......",
+    "...KFFKKFFK.....",
+    "..KFFKHHKFFK....",
+    "..KFKHHHHKFK....",
+    "...KHHHHHHK.....",
+    "..KHSESSESHK....",
+    "..KHSSPPSSHK....",
+    "...KSSSSSSK.....",
+    "....KGGGGK......",
+    "...KGGGGGGK.....",
+    "..KGLGGGGLGK....",
+    ".KGLLGGGGLLGK...",
+    ".KGGKGGGGKGGK...",
+    "..KKGGGGGGKK....",
+    "....KKKKKK......",
+    "................"]},
+  harpy: { pal:{K:'#2a1828',W:'#50b8c8',H:'#e85888',S:'#ffe0c0',E:'#7838c0',P:'#f08080',D:'#3898a8'}, rows:[
+    "................",
+    ".WW..KKKKKK..WW.",
+    "WWWWKHHHHHHKWWWW",
+    "WWW.KHHHHHHK.WWW",
+    "WW..KSESSESK..WW",
+    "WW..KSSPPSSK..WW",
+    ".W..KHSSSSHK..W.",
     "....KKDDDDKK....",
+    "...KWDDDDDDWK...",
+    "..KWWDDDDDDWWK..",
+    ".KWWKDDDDDDKWWK.",
+    ".KWK.KDDDDK.KWK.",
+    "..K..KDKKDK..K..",
+    ".....KS..SK.....",
+    "....KK....KK....",
+    "................"]},
+  banshee: { pal:{K:'#182030',H:'#d8e8f8',S:'#e8f0f8',E:'#4060c0',P:'#a8b8d8',G:'#b8cce8'}, rows:[
+    "................",
+    ".....KKKKKK.....",
+    "...KKHHHHHHKK...",
+    "..KHHHHHHHHHHK..",
+    ".KHHKSESSESKHHK.",
+    ".KHHKSSPPSSKHHK.",
+    ".KHKSSSSSSSSKHK.",
+    ".KHKGGGGGGGGKHK.",
+    ".KHKGGGGGGGGKHK.",
+    ".KKGGGGGGGGGGKK.",
+    ".KGGKGGGGGGKGGK.",
+    "..KGGGGGGGGGGK..",
+    "..KGGKGGGGKGGK..",
+    "...KK.KGGK.KK...",
     "......KKKK......",
     "................"]},
-  bat: { pal:{K:'#241430',B:'#6a3a9c',W:'#ffffff',P:'#180828',M:'#ffffff',D:'#4a2870'}, rows:[
-    "................",
-    ".K............K.",
-    "KBK..........KBK",
-    "KBBK..KKKK..KBBK",
-    "KBBBKKBBBBKKBBBK",
-    "KBBBBWPBBPWBBBBK",
-    "KBBBBBBBBBBBBBBK",
-    ".KBDBBKMMKBBDBK.",
-    ".KBDKBBBBBBKDBK.",
-    "..K.KBBBBBBK.K..",
-    ".....KBKKBK.....",
-    ".....K..K..K....",
-    "................",
-    "................",
-    "................",
-    "................"]},
-  skel: { pal:{K:'#202020',W:'#e8e8d8'}, rows:[
-    "................",
-    ".....KKKKKK.....",
-    "....KWWWWWWK....",
-    "...KWWWWWWWWK...",
-    "...KWKKWWKKWK...",
-    "...KWKKWWKKWK...",
-    "...KWWWKKWWWK...",
-    "....KWKWWKWK....",
-    ".....KKKKKK.....",
-    "..KKKWWWWWWKKK..",
-    "..KW.KWWWWK.WK..",
-    "..KW.KWKKWK.WK..",
-    "..KK.KWWWWK.KK..",
-    ".....KKWWKK.....",
-    ".....KW..WK.....",
-    "....KKW..WKK...."]},
-  mage: { pal:{K:'#1a1030',H:'#5038b8',S:'#100818',Y:'#ffd840',R:'#7a50d0',D:'#5838a8'}, rows:[
-    "................",
+  witch: { pal:{K:'#1a1228',H:'#6a3ab8',M:'#502880',S:'#f0d8c8',E:'#c83898',P:'#f08080',D:'#8848d0'}, rows:[
     ".......KK.......",
     "......KHHK......",
     ".....KHHHHK.....",
     "....KHHHHHHK....",
-    "..KKHHHHHHHHKK..",
-    ".KHHHHHHHHHHHHK.",
-    "..KKSSSSSSSSKK..",
-    "...KSYSSSSYSK...",
-    "...KSSSSSSSSK...",
-    "..KRRRRRRRRRRK..",
-    ".KRRRRRRRRRRRRK.",
-    ".KRDRRRRRRRRDRK.",
-    ".KRDRRRRRRRRDRK.",
-    ".KRRRRRRRRRRRRK.",
-    ".KKKKKKKKKKKKKK."]},
-  drag: { pal:{K:'#103818',G:'#38a04c',L:'#b8e088',V:'#268040',W:'#ffffff',P:'#102018'}, rows:[
-    "................",
-    "....KK....KK....",
-    "...KGGK..KGGK...",
-    "...KGGGKKGGGK...",
-    "..KGGGGGGGGGGK..",
-    ".KGGWPGGGGWPGGK.",
-    ".KGGGGGGGGGGGGK.",
-    ".KGGKWWWWWWKGGK.",
-    ".KGGGKKKKKKGGGK.",
-    ".KGGLLLLLLLLGGK.",
-    "KVGGLLLLLLLLGGVK",
-    "KVVGLLLLLLLLGVVK",
-    ".KGGLLLLLLLLGGK.",
-    ".KGGGLLLLLLGGGK.",
-    "..KGGK....KGGK..",
-    "..KKKK....KKKK.."]},
-  rat: { pal:{K:'#2a1c14',B:'#9a7a58',L:'#d8c0a0',P:'#e89098',W:'#ffffff',E:'#181010',N:'#d86878'}, rows:[
-    "................",
-    ".KK..........KK.",
-    "KBPK........KPBK",
-    "KBPBK......KBPBK",
-    ".KBBKKKKKKKKBBK.",
-    ".KBBBBBBBBBBBBK.",
-    ".KBKEBBBBBBEKBK.",
-    ".KBBBBKNNKBBBBK.",
-    ".KBBBKWWWWKBBBK.",
-    "..KBBBBBBBBBBK..",
-    ".KBBBBBBBBBBBBK.",
-    ".KBBLLLLLLLLBBK.",
-    "..KBBLLLLLLBBK..",
-    "...KKBBBBBBKK...",
-    "....KKKK...KKP..",
-    ".............PP."]},
-  shroom: { pal:{K:'#2a1830',H:'#8a48b8',W:'#e8d8f0',S:'#e8d0a8',E:'#302018'}, rows:[
-    "................",
-    "....KKKKKKKK....",
-    "..KKHHHHHHHHKK..",
-    ".KHHWWHHHHWWHHK.",
-    ".KHHHHHWWHHHHHK.",
+    ".KKKKHHHHHHKKKK.",
     "KHHHHHHHHHHHHHHK",
-    "KHHWWHHHHHHWWHHK",
     ".KKKKKKKKKKKKKK.",
-    "..KSSSSSSSSSSK..",
-    "..KSESSSSSSESK..",
-    "..KSSSKKKKSSSK..",
-    "..KSSSSSSSSSSK..",
-    "...KKSSSSSSKK...",
+    "...KMSESSESMK...",
+    "...KMSSPPSSMK...",
     "....KSSSSSSK....",
-    "...KKSSSSSSKK...",
-    "...KKKKKKKKKK..."]},
+    "....KDDDDDDK....",
+    "...KDDDDDDDDK...",
+    "..KDDDDDDDDDDK..",
+    ".KDDDDDDDDDDDDK.",
+    ".KKKKKKKKKKKKKK.",
+    "................"]},
+  succubus: { pal:{K:'#241020',W:'#8a3050',H:'#503060',S:'#f8d8c8',E:'#d83050',P:'#f06060',D:'#a02848'}, rows:[
+    "..KK........KK..",
+    ".KWWK.KKKK.KWWK.",
+    "KWWWKKHHHHKKWWWK",
+    "KWWKHHHHHHHHKWWK",
+    "KWWKHSESSESHKWWK",
+    "KWKHHSSPPSSHHKWK",
+    "KWKHHSSSSSSHHKWK",
+    ".KKH.KSSSSK.HKK.",
+    "..KH.KDDDDK.HK..",
+    "..K.KDDDDDDK.K..",
+    "....KDDDDDDK....",
+    "...KDDDDDDDDK...",
+    "...KDKDDDDKDK...",
+    "....K.KKKK.K....",
+    "......KSSK......",
+    ".....KK..KK....."]},
   demon: { pal:{K:'#140a18',H:'#e8d8c0',B:'#8a2440',R:'#ff4848',D:'#5e1830',W:'#38204a'}, rows:[
     "..K..........K..",
     ".KHK........KHK.",
@@ -728,6 +728,42 @@ function drawTile(ch, px, py, gx, gy) {
       r(6, 7, 4, 1, '#55556e');
       break;
     }
+    case 'n': {  // かみの神殿(ワールドマップ)
+      grass();
+      r(7, 0, 2, 1, '#ffe878');
+      r(5, 1, 6, 1, '#f8f4e8'); r(3, 2, 10, 1, '#f8f4e8');
+      r(2, 3, 12, 2, '#f0ead0'); r(2, 5, 12, 1, '#c8a030');
+      r(3, 6, 2, 7, '#f0ead0'); r(7, 6, 2, 7, '#f0ead0'); r(11, 6, 2, 7, '#f0ead0');
+      r(4, 6, 1, 7, '#cfc8a8'); r(8, 6, 1, 7, '#cfc8a8'); r(12, 6, 1, 7, '#cfc8a8');
+      r(5, 6, 2, 7, '#403828'); r(9, 6, 2, 7, '#403828');
+      r(2, 13, 12, 1, '#d8d0b0'); r(1, 14, 14, 1, '#c0b890');
+      break;
+    }
+    case 'l': {  // 大理石の床(神殿)
+      r(0, 0, 16, 16, '#e8e4ec');
+      if ((gx + gy) % 2 === 0) r(0, 0, 16, 16, 'rgba(120,120,180,0.07)');
+      r(0, 15, 16, 1, '#c8c4d4'); r(15, 0, 1, 16, '#c8c4d4');
+      if (rnd(gx, gy, 41) > 0.8) r(Math.floor(rnd(gx, gy, 42) * 12) + 2, Math.floor(rnd(gx, gy, 43) * 12) + 2, 2, 1, '#d8d4e0');
+      break;
+    }
+    case 'p': {  // 白い柱(神殿)
+      drawTile('l', px, py, gx, gy);
+      r(3, 0, 10, 2, '#f8f4f0'); r(3, 2, 10, 1, '#c8a030');
+      r(4, 3, 8, 10, '#e8e0d8');
+      r(6, 3, 1, 10, '#cfc4b8'); r(9, 3, 1, 10, '#cfc4b8');
+      r(3, 13, 10, 2, '#d8d0c8'); r(3, 13, 10, 1, '#f0ece4');
+      break;
+    }
+    case 'o': {  // ひかる祭壇(神殿)
+      drawTile('l', px, py, gx, gy);
+      r(3, 6, 10, 7, '#e8e0d8'); r(4, 7, 8, 5, '#d8d0c8');
+      r(2, 4, 12, 2, '#f8f4f0'); r(2, 6, 12, 1, '#c8a030');
+      const gl = Math.floor(tick / 14) % 2;
+      r(6, 1, 4, 3, gl ? '#ffe878' : '#ffd040');
+      r(7, 1, 2, 2, '#ffffff');
+      r(5, 0, 1, 1, '#ffffff'); r(10, 2, 1, 1, '#ffffff');
+      break;
+    }
     case 's': {  // セーブの まほうじん
       grass();
       const c1 = Math.floor(tick / 16) % 2 ? '#9ae8ff' : '#62c8f8';
@@ -765,12 +801,14 @@ function genWorld() {
       }
       if (Math.abs(x - 20) <= 2 && Math.abs(y - 8) <= 2) ch = 'G';
       if (Math.abs(x - 20) <= 1 && Math.abs(y - 23) <= 1) ch = 'G';
+      if (Math.abs(x - 15) <= 1 && Math.abs(y - 5) <= 1) ch = 'G';
       s += ch;
     }
     rows.push(s);
   }
   rows[8] = rows[8].slice(0, 20) + 'A' + rows[8].slice(21);
   rows[23] = rows[23].slice(0, 20) + 'c' + rows[23].slice(21);
+  rows[5] = rows[5].slice(0, 15) + 'n' + rows[5].slice(16);
   return rows;
 }
 
@@ -818,6 +856,7 @@ const MAPS = {
         lines:["この さきは ワールドマップだ。",
                "そこの ひかる まほうじんに のれば\nぼうけんのしょに きろく できるぞ。",
                "とおくへ いくほど つよい まものが でる。\nまずは まちの ちかくで レベルあげだ。",
+               "きたにしの しんでんには ふるき かみが すむ。\n３にんで ゆけば なにかが おこるという…",
                "はるか みなみには まおうの しろが…\nいくなら なかまと そなえを わすれるな！",
                "しんでも ゴールドが はんぶんに なるだけだ。\nきがるに いってこい！"] },
     ],
@@ -934,12 +973,30 @@ const MAPS = {
         pal:{hair:'#2a1838',skin:'#b89ac8',cloth:'#581828',legs:'#2a1020'} },
     ],
   },
+  temple: {
+    grid: [
+      "#########",
+      "#pllollp#",
+      "#lllllll#",
+      "#lllllll#",
+      "#plllllp#",
+      "#lllllll#",
+      "####D####",
+    ],
+    track: 'title',
+    warps: { "4,6": { map:'world', x:15, y:6, dir:'down' } },
+    npcs: [
+      { tx:4, ty:2, dir:'down', god:true, sprite:'mage',
+        pal:{hair:'#e8e4f0',skin:'#f0d8b8',cloth:'#f0ead8',legs:'#c8c0a8'} },
+    ],
+  },
   world: {
     grid: genWorld(),
     track: 'field',
     warps: {
       "20,8":  { map:'town',   x:9, y:13, dir:'up' },
       "20,23": { map:'castle', x:6, y:7,  dir:'up' },
+      "15,5":  { map:'temple', x:4, y:5,  dir:'up' },
     },
     npcs: [],
   },
@@ -948,7 +1005,7 @@ const MAPS = {
 let mapId = 'town';
 let map = MAPS[mapId];
 
-const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e','r','k','h','z','m','q','a','j','t','g']);
+const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e','r','k','h','z','m','q','a','j','t','g','p','o']);
 const tileAt = (m, x, y) => {
   const g = MAPS[m].grid;
   if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return 'T';
@@ -986,7 +1043,7 @@ const LVT = [null,
   {exp:2000, hp:54, mp:40, str:35, agi:31},
 ];
 const MAXLV = 10;
-const WEAPONS = { "ひのきのぼう":{atk:2}, "こんぼう":{atk:4}, "どうのつるぎ":{atk:10} };
+const WEAPONS = { "ひのきのぼう":{atk:2}, "こんぼう":{atk:4}, "どうのつるぎ":{atk:10}, "しんのつるぎ":{atk:25} };
 const ARMORS  = { "たびのふく":{def:4} };
 const SHIELDS = { "かわのたて":{def:4} };
 const ITEMS   = { "やくそう":{use:'heal'}, "どくけしそう":{use:'none'}, "せいすい":{use:'none'}, "キメラのつばさ":{use:'wing'} };
@@ -995,7 +1052,7 @@ const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? '
 
 const hero = {
   name:'ゆうしゃ', lv:1, exp:0, hp:16, mp:0, gold:120,
-  weapon:null, armor:null, shield:null, inv:{}, cleared:false,
+  weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false,
   pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
 };
 const maxHp = () => LVT[hero.lv].hp;
@@ -1009,6 +1066,7 @@ const JOBS = {
   warrior: {
     name:'ガロン', label:'せんし', atkBonus:4, defBonus:6,
     gear:'バトルアクス・てつのよろい',
+    blessedAtk:16, blessedGear:'らいじんのおの・ミスリルよろい',
     pal:{ hair:'#7a2818', skin:'#e8b878', cloth:'#b03828', legs:'#583020' },
     lvt:[null,
       {hp:20,mp:0,str:6, agi:3}, {hp:26,mp:0,str:8, agi:4}, {hp:30,mp:0,str:11,agi:5},
@@ -1021,6 +1079,7 @@ const JOBS = {
   mage: {
     name:'ミリア', label:'まほうつかい', atkBonus:1, defBonus:2, caster:true,
     gear:'かしのつえ・ぬののローブ',
+    blessedAtk:10, blessedGear:'けんじゃのつえ・せいれいのローブ',
     pal:{ hair:'#5038b8', skin:'#f0d8b8', cloth:'#7a50d0', legs:'#4a3090' },
     lvt:[null,
       {hp:12,mp:8, str:2, agi:5}, {hp:15,mp:12,str:3, agi:7}, {hp:17,mp:16,str:4, agi:10},
@@ -1035,8 +1094,11 @@ const party = [];
 const allAllies = () => [hero, ...party];
 const maxHpOf = a => a === hero ? maxHp() : JOBS[a.job].lvt[hero.lv].hp;
 const maxMpOf = a => a === hero ? maxMp() : JOBS[a.job].lvt[hero.lv].mp;
-const atkOf = a => a === hero ? atk() : JOBS[a.job].lvt[hero.lv].str + JOBS[a.job].atkBonus;
-const dfnOf = a => a === hero ? dfn() : Math.floor(JOBS[a.job].lvt[hero.lv].agi / 2) + JOBS[a.job].defBonus;
+const atkOf = a => a === hero ? atk()
+  : JOBS[a.job].lvt[hero.lv].str + JOBS[a.job].atkBonus + (hero.blessed ? JOBS[a.job].blessedAtk : 0);
+const dfnOf = a => a === hero ? dfn()
+  : Math.floor(JOBS[a.job].lvt[hero.lv].agi / 2) + JOBS[a.job].defBonus + (hero.blessed ? 6 : 0);
+const gearOf = m => hero.blessed ? JOBS[m.job].blessedGear : JOBS[m.job].gear;
 function makeCompanion(job) {
   const j = JOBS[job];
   return { job, name:j.name, hp:j.lvt[hero.lv].hp, mp:j.lvt[hero.lv].mp, pal:j.pal,
@@ -1056,17 +1118,17 @@ function equip(n) {
 }
 
 const ENEMIES = {
-  'スライム':       { hp:5,  atk:4,  def:0,  agi:2,  exp:2,  gold:5,  art:'slime' },
-  'あかスライム':   { hp:7,  atk:6,  def:1,  agi:3,  exp:3,  gold:7,  art:'slime',
-                      pal:{K:'#4a1410',B:'#e85040',L:'#ffb09c',D:'#b03024',W:'#ffffff'} },
-  'おおねずみ':     { hp:6,  atk:5,  def:1,  agi:5,  exp:3,  gold:5,  art:'rat' },
-  'キノコこぞう':   { hp:9,  atk:7,  def:2,  agi:3,  exp:4,  gold:8,  art:'shroom' },
-  'ぎんのスライム': { hp:5,  atk:5,  def:40, agi:20, exp:20, gold:18, art:'slime', flee:0.4,
-                      pal:{K:'#2a2a38',B:'#b4bcc8',L:'#eef2f8',D:'#848ca0',W:'#ffffff'} },
-  'おおコウモリ':   { hp:9,  atk:8,  def:3,  agi:8,  exp:4,  gold:8,  art:'bat' },
-  'がいこつ':       { hp:14, atk:11, def:6,  agi:7,  exp:8,  gold:16, art:'skel' },
-  'まどうし':       { hp:13, atk:10, def:5,  agi:8,  exp:11, gold:22, art:'mage', spell:true },
-  'ベビードラゴン': { hp:24, atk:15, def:10, agi:11, exp:20, gold:40, art:'drag', breath:true },
+  'ピクシー':       { hp:5,  atk:4,  def:0,  agi:2,  exp:2,  gold:5,  art:'pixie' },
+  'ピンクピクシー': { hp:7,  atk:6,  def:1,  agi:3,  exp:3,  gold:7,  art:'pixie',
+                      pal:{K:'#381c2c',H:'#f078b8',S:'#ffe0c0',D:'#e85890',W:'#ffd0e8',E:'#c83878',P:'#f08080'} },
+  'キャットガール': { hp:6,  atk:5,  def:1,  agi:5,  exp:3,  gold:5,  art:'cat' },
+  'アルラウネ':     { hp:9,  atk:7,  def:2,  agi:3,  exp:4,  gold:8,  art:'alraune' },
+  'ぎんのピクシー': { hp:5,  atk:5,  def:40, agi:20, exp:20, gold:18, art:'pixie', flee:0.4,
+                      pal:{K:'#2a2a38',H:'#d8dce8',S:'#f0f0f4',D:'#b4bcc8',W:'#eef2f8',E:'#6878a0',P:'#c8b0b8'} },
+  'ハーピー':       { hp:9,  atk:8,  def:3,  agi:8,  exp:4,  gold:8,  art:'harpy' },
+  'バンシー':       { hp:14, atk:11, def:6,  agi:7,  exp:8,  gold:16, art:'banshee' },
+  'ウィッチ':       { hp:13, atk:10, def:5,  agi:8,  exp:11, gold:22, art:'witch', spell:true },
+  'サキュバス':     { hp:24, atk:15, def:10, agi:11, exp:20, gold:40, art:'succubus', breath:true },
   'まおう':         { hp:150, atk:34, def:18, agi:14, exp:250, gold:500, art:'demon',
                       spell:true, breath:true, boss:true },
 };
@@ -1138,7 +1200,7 @@ function save() {
     localStorage.setItem('hajimari_save', JSON.stringify({
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
-      cleared:hero.cleared,
+      cleared:hero.cleared, blessed:hero.blessed,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
       pos: { map:mapId, x:player.tx, y:player.ty },
     }));
@@ -1153,6 +1215,7 @@ function loadSave() {
     delete d.party; delete d.pos;
     Object.assign(hero, d);
     hero.cleared = !!d.cleared;
+    hero.blessed = !!d.blessed;
     party.length = 0;
     for (const s of pd) {
       if (!JOBS[s.job]) continue;
@@ -1172,7 +1235,7 @@ function newGame() {
   hero.hp = 16; hero.mp = 0;
   hero.weapon = 'ひのきのぼう';
   hero.armor = hero.shield = null;
-  hero.inv = {}; hero.cleared = false;
+  hero.inv = {}; hero.cleared = false; hero.blessed = false;
   party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
@@ -1264,9 +1327,34 @@ function interact() {
     msg(["よくぞ ここまで きたな ちいさきもの…",
          "この よの やみは すべて わがもの。\nおまえたちの たびは ここで おわりだ！"],
         () => startBattle(npc.boss, 'castle'));
+  } else if (npc.god) {
+    godTalk();
   } else {
     msg(npc.lines.slice());
   }
+}
+function godTalk() {
+  if (hero.blessed) {
+    msg(["なんじらに さずけし ちからは\nせかいを てらす ひかりと ならん…"]);
+    return;
+  }
+  if (party.length < 2) {
+    msg(["われは ふるき かみ なり…",
+         "３つの いさましき たましいが\nそろいしとき ふたたび まみえよう。"]);
+    return;
+  }
+  msg(["われは ふるき かみ なり…\nよくぞ ３にんで ここまで きた。",
+       "なんじらに しんの ちからを さずけよう！"], () => {
+    hero.blessed = true;
+    if (hero.weapon) addInv(hero.weapon);
+    hero.weapon = 'しんのつるぎ';
+    seLevelUp();
+    startFade(null, () => {
+      msg(["てんから ひかりが ふりそそぐ…！",
+           `${hero.name}は しんのつるぎを さずかった！\n${JOBS.warrior.name}は らいじんのおの！\n${JOBS.mage.name}は けんじゃのつえ！`,
+           "３にんは あらたな すがたに めざめた！"]);
+    });
+  });
 }
 function recruitTalk(npc) {
   const j = JOBS[npc.recruit];
@@ -1329,13 +1417,13 @@ function checkEncounter() {
   const rate = ch === 'F' ? 1 / 7 : 1 / 14;
   if (Math.random() >= rate) return;
   const forest = ch === 'F';
-  if (Math.random() < 0.05) { startBattle('ぎんのスライム', forest ? 'forest' : 'grass'); return; }
+  if (Math.random() < 0.05) { startBattle('ぎんのピクシー', forest ? 'forest' : 'grass'); return; }
   let pool;
-  if (d <= 7)       pool = forest ? ['おおねずみ','キノコこぞう','おおコウモリ','あかスライム']
-                                  : ['スライム','スライム','あかスライム','おおねずみ','キノコこぞう'];
-  else if (d <= 14) pool = forest ? ['がいこつ','まどうし','キノコこぞう','おおコウモリ']
-                                  : ['おおコウモリ','あかスライム','がいこつ','おおねずみ'];
-  else              pool = forest ? ['まどうし','ベビードラゴン','がいこつ'] : ['がいこつ','まどうし','ベビードラゴン'];
+  if (d <= 7)       pool = forest ? ['キャットガール','アルラウネ','ハーピー','ピンクピクシー']
+                                  : ['ピクシー','ピクシー','ピンクピクシー','キャットガール','アルラウネ'];
+  else if (d <= 14) pool = forest ? ['バンシー','ウィッチ','アルラウネ','ハーピー']
+                                  : ['ハーピー','ピンクピクシー','バンシー','キャットガール'];
+  else              pool = forest ? ['ウィッチ','サキュバス','バンシー'] : ['バンシー','ウィッチ','サキュバス'];
   startBattle(pool[Math.floor(Math.random() * pool.length)], forest ? 'forest' : 'grass');
 }
 
@@ -1789,81 +1877,98 @@ function drawChara(e, cam) {
     if (d !== 'left') r(d === 'right' ? 15 : 14, ey, 2, 2, col);
   };
   const kind = e.sprite || (e === player ? 'hero' : 'villager');
+  const bl = hero.blessed && (kind === 'hero' || kind === 'warrior' || kind === 'mage');
   if (kind === 'hero') {
-    // あかいマント
-    if (d === 'up') r(5, 12, 14, 8, '#b02828');
-    else if (d === 'left') r(17, 12, 3, 7, '#b02828');
-    else if (d === 'right') r(4, 12, 3, 7, '#b02828');
-    else { r(3, 12, 2, 7, '#b02828'); r(19, 12, 2, 7, '#b02828'); }
-    // 青い全身よろい(ロト風)
-    r(5, 12, 14, 6, '#3464d4');
-    r(5, 12, 5, 3, '#6a94f0');
-    r(5, 15, 14, 1, '#22429e');
-    r(11, 13, 2, 2, '#ffd860');   // むねの金の紋章
-    r(5, 17, 14, 1, '#22429e'); r(11, 17, 2, 1, '#ffd860');
-    r(2, 11, 4, 4, '#3464d4'); r(2, 11, 4, 1, '#ffd860');   // かたあて(金ぶち)
-    r(18, 11, 4, 4, '#3464d4'); r(18, 11, 4, 1, '#ffd860');
-    r(3, 15, 2, 3, '#22429e'); r(19, 15, 2, 3, '#22429e');  // こて
-    legs('#22429e', 'rgba(0,0,0,0.3)');
+    // マント(覚醒で 白銀に)
+    const cape = bl ? '#f0f0f8' : '#b02828';
+    if (d === 'up') r(5, 12, 14, 8, cape);
+    else if (d === 'left') r(17, 12, 3, 7, cape);
+    else if (d === 'right') r(4, 12, 3, 7, cape);
+    else { r(3, 12, 2, 7, cape); r(19, 12, 2, 7, cape); }
+    // 全身よろい(覚醒で 黄金に)
+    const ab = bl ? '#e0b438' : '#3464d4';  // 基本色
+    const al = bl ? '#f8e088' : '#6a94f0';  // ハイライト
+    const ad = bl ? '#a07818' : '#22429e';  // 影
+    const tr2 = bl ? '#ffffff' : '#ffd860'; // ふちどり
+    r(5, 12, 14, 6, ab);
+    r(5, 12, 5, 3, al);
+    r(5, 15, 14, 1, ad);
+    r(11, 13, 2, 2, bl ? '#50d8f0' : '#ffd860');   // むねの紋章
+    r(5, 17, 14, 1, ad); r(11, 17, 2, 1, tr2);
+    r(2, 11, 4, 4, ab); r(2, 11, 4, 1, tr2);       // かたあて
+    r(18, 11, 4, 4, ab); r(18, 11, 4, 1, tr2);
+    r(3, 15, 2, 3, ad); r(19, 15, 2, 3, ad);       // こて
+    legs(ad, 'rgba(0,0,0,0.3)');
     // かお
-    if (d === 'up') r(7, 7, 10, 4, '#2a4cae');
+    if (d === 'up') r(7, 7, 10, 4, ad);
     else { r(7, 7, 10, 4, p.skin); eyes(8, '#201810'); }
-    r(6, 7, 1, 4, '#3464d4'); r(17, 7, 1, 4, '#3464d4');    // ほおあて
+    r(6, 7, 1, 4, ab); r(17, 7, 1, 4, ab);         // ほおあて
     // つばさかざりの かぶと
-    r(6, 1, 12, 2, '#3a6ae0');
-    r(5, 3, 14, 3, '#3a6ae0');
-    r(5, 5, 14, 1, '#ffd860');                              // 金ぶちのひさし
-    r(8, 1, 6, 1, '#7aa4f8');
-    r(10, 0, 4, 1, '#e84040');                              // あかい とさか
-    r(3, 1, 2, 4, '#ffd860'); r(2, 2, 1, 2, '#ffd860');     // 金のつばさ
-    r(19, 1, 2, 4, '#ffd860'); r(21, 2, 1, 2, '#ffd860');
+    r(6, 1, 12, 2, bl ? '#f0c848' : '#3a6ae0');
+    r(5, 3, 14, 3, bl ? '#f0c848' : '#3a6ae0');
+    r(5, 5, 14, 1, tr2);
+    r(8, 1, 6, 1, al);
+    r(10, 0, 4, 1, bl ? '#50d8f0' : '#e84040');    // とさか(覚醒で 蒼く)
+    r(3, 1, 2, 4, tr2); r(2, 2, 1, 2, tr2);        // つばさ
+    r(19, 1, 2, 4, tr2); r(21, 2, 1, 2, tr2);
   } else if (kind === 'warrior') {
-    // よろい
-    r(5, 12, 14, 6, '#9aa4b8');
-    r(5, 12, 5, 3, '#c8d0e0');
-    r(5, 15, 14, 1, '#7a8498');
-    r(5, 17, 14, 1, '#583020'); r(11, 17, 2, 1, '#c8a030');
-    r(2, 11, 4, 4, '#b8c4d4'); r(2, 11, 4, 1, '#d8e0ec');   // かたあて
-    r(18, 11, 4, 4, '#b8c4d4'); r(18, 11, 4, 1, '#d8e0ec');
+    // よろい(覚醒で 黒鋼に)
+    const wb = bl ? '#4a5468' : '#9aa4b8';
+    const wl = bl ? '#6a7488' : '#c8d0e0';
+    const wd = bl ? '#323a4c' : '#7a8498';
+    r(5, 12, 14, 6, wb);
+    r(5, 12, 5, 3, wl);
+    r(5, 15, 14, 1, wd);
+    r(5, 17, 14, 1, bl ? '#8c2030' : '#583020'); r(11, 17, 2, 1, '#ffd860');
+    r(2, 11, 4, 4, wl); r(2, 11, 4, 1, bl ? '#ffd860' : '#d8e0ec');   // かたあて
+    r(18, 11, 4, 4, wl); r(18, 11, 4, 1, bl ? '#ffd860' : '#d8e0ec');
     r(3, 15, 2, 3, p.cloth); r(19, 15, 2, 3, p.cloth);      // うで
-    legs('#583020', 'rgba(0,0,0,0.3)');
+    legs(bl ? '#323a4c' : '#583020', 'rgba(0,0,0,0.3)');
     // かお
-    if (d === 'up') r(7, 7, 10, 4, '#8a94a8');
+    if (d === 'up') r(7, 7, 10, 4, wd);
     else { r(7, 7, 10, 4, p.skin); eyes(8, '#201810'); }
     // つのつき かぶと
-    r(6, 1, 12, 2, '#b8c4d4');
-    r(5, 3, 14, 3, '#b8c4d4');
-    r(5, 5, 14, 1, '#8a94a8');
-    r(8, 1, 6, 1, '#e0e8f0');
-    r(3, 0, 2, 3, '#e8d8c0'); r(3, 0, 2, 1, '#fff8e8');
-    r(19, 0, 2, 3, '#e8d8c0'); r(19, 0, 2, 1, '#fff8e8');
-    // おの
+    r(6, 1, 12, 2, wl);
+    r(5, 3, 14, 3, wl);
+    r(5, 5, 14, 1, wd);
+    r(8, 1, 6, 1, bl ? '#8a94a8' : '#e0e8f0');
+    if (bl) r(10, 0, 4, 1, '#e84040');                      // あかい たてがみ
+    const horn = bl ? '#ffd860' : '#e8d8c0';                // 覚醒で 金のつの
+    r(3, 0, 2, 3, horn); r(3, 0, 2, 1, bl ? '#fff8d0' : '#fff8e8');
+    r(19, 0, 2, 3, horn); r(19, 0, 2, 1, bl ? '#fff8d0' : '#fff8e8');
+    // おの(覚醒で いかずちの刃)
     const ax = d === 'left' ? 2 : 20;
-    r(ax + 1, 9, 1, 10, '#7a4a20');
-    r(ax, 7, 3, 3, '#c8ccd8');
-    r(ax + (d === 'left' ? 0 : 2), 7, 1, 3, '#eef2f8');
+    r(ax + 1, 9, 1, 10, bl ? '#3a3448' : '#7a4a20');
+    r(ax, 7, 3, 3, bl ? '#70e8f8' : '#c8ccd8');
+    r(ax + (d === 'left' ? 0 : 2), 7, 1, 3, bl ? '#d8f8ff' : '#eef2f8');
+    if (bl && Math.floor(tick / 9) % 2) r(ax + 1, 6, 1, 1, '#ffffff');  // 稲妻
   } else if (kind === 'mage') {
-    // ローブ
-    r(5, 12, 14, 6, p.cloth);
-    r(4, 18, 16, 2, p.cloth);
+    // ローブ(覚醒で 白い賢者に)
+    const robe = bl ? '#f0eef8' : p.cloth;
+    const hat = bl ? '#f0eef8' : p.hair;
+    const trim = bl ? '#c8a030' : '#3a2890';
+    r(5, 12, 14, 6, robe);
+    r(4, 18, 16, 2, robe);
     r(5, 12, 5, 5, 'rgba(255,255,255,0.12)');
-    r(4, 20, 16, 1, '#3a2890');
-    r(8, 21, 3, 1, '#1a1038'); r(13, 21, 3, 1, '#1a1038');
-    r(3, 12, 2, 5, p.cloth); r(19, 12, 2, 5, p.cloth);   // そで
+    r(4, 20, 16, 1, trim);
+    r(8, 21, 3, 1, bl ? '#a08020' : '#1a1038'); r(13, 21, 3, 1, bl ? '#a08020' : '#1a1038');
+    r(3, 12, 2, 5, robe); r(19, 12, 2, 5, robe);   // そで
     // かお
-    if (d === 'up') r(7, 7, 10, 5, p.hair);
+    if (d === 'up') r(7, 7, 10, 5, hat);
     else { r(7, 7, 10, 5, p.skin); eyes(8, '#201810'); }
     r(6, 7, 1, 4, p.hair); r(17, 7, 1, 4, p.hair);
     // とんがりぼうし
-    r(11, 0, 2, 1, p.hair); r(10, 1, 4, 1, p.hair);
-    r(9, 2, 6, 1, p.hair); r(8, 3, 8, 1, p.hair);
-    r(7, 4, 10, 1, p.hair);
-    r(4, 5, 16, 1, p.hair); r(4, 6, 16, 1, '#3a2890');
-    r(12, 2, 1, 1, '#ffd860');
-    // つえ
+    r(11, 0, 2, 1, hat); r(10, 1, 4, 1, hat);
+    r(9, 2, 6, 1, hat); r(8, 3, 8, 1, hat);
+    r(7, 4, 10, 1, hat);
+    r(4, 5, 16, 1, hat); r(4, 6, 16, 1, trim);
+    r(12, 2, bl ? 2 : 1, 1, '#ffd860');
+    // つえ(覚醒で 金のオーブ)
     const sx = d === 'left' ? 2 : 21;
-    r(sx, 6, 1, 12, '#8a5c2c');
-    r(sx - 1, 3, 3, 3, '#50d8f0'); r(sx, 4, 1, 1, '#d8f8ff');
+    r(sx, 6, 1, 12, bl ? '#e8d8c0' : '#8a5c2c');
+    r(sx - 1, 3, 3, 3, bl ? '#ffd860' : '#50d8f0');
+    r(sx, 4, 1, 1, bl ? '#ffffff' : '#d8f8ff');
+    if (bl && Math.floor(tick / 9) % 2) r(sx - 1, 2, 1, 1, '#ffffff');
   } else if (kind === 'demon') {
     // マント
     r(4, 12, 16, 9, p.cloth);
@@ -1895,12 +2000,24 @@ function drawChara(e, cam) {
     r(5, 6, 14, 1, p.hair);
     r(7, 1, 6, 1, 'rgba(255,255,255,0.25)');
   }
+  if (bl) {  // 覚醒中は 金の粒子が 舞う
+    const ph = Math.floor(tick / 7 + e.tx * 3) % 4;
+    if (ph === 0) { r(2, 5, 1, 1, '#ffffff'); r(20, 15, 1, 1, '#ffe878'); }
+    else if (ph === 1) { r(21, 8, 1, 1, '#ffe878'); r(4, 18, 1, 1, '#ffffff'); }
+    else if (ph === 2) { r(1, 12, 1, 1, '#ffe878'); r(19, 3, 1, 1, '#ffffff'); }
+  }
   if (e === player && hero.weapon) drawHeldWeapon(r, d);
 }
 function drawHeldWeapon(r, dir) {
   const n = hero.weapon;
   const vert = x => {  // 縦持ち(きほん きを つけ の よこ)
-    if (n === 'どうのつるぎ') {
+    if (n === 'しんのつるぎ') {
+      r(x, 0, 1, 2, '#ffffff');
+      r(x, 2, 1, 11, '#ffe878'); r(x, 3, 1, 8, '#fff8d0');
+      r(x - 1, 13, 3, 1, '#ffd860');
+      r(x, 14, 1, 4, '#3a64d4');
+      if (Math.floor(tick / 8) % 2) r(x - 1, 1, 1, 1, '#ffffff');
+    } else if (n === 'どうのつるぎ') {
       r(x, 1, 1, 2, '#f8e8b8');
       r(x, 3, 1, 10, '#e0a850'); r(x, 4, 1, 7, '#f0c878');
       r(x - 1, 13, 3, 1, '#c8a030');
@@ -1913,7 +2030,12 @@ function drawHeldWeapon(r, dir) {
     }
   };
   const horiz = (x0, right) => {  // よこ持ち(すすむ ほうこうへ)
-    if (n === 'どうのつるぎ') {
+    if (n === 'しんのつるぎ') {
+      r(right ? x0 : x0 + 6, 15, 4, 1, '#3a64d4');
+      r(right ? x0 + 4 : x0 + 5, 14, 1, 3, '#ffd860');
+      r(right ? x0 + 5 : x0, 15, 5, 1, '#ffe878');
+      r(right ? x0 + 9 : x0, 15, 1, 1, '#ffffff');
+    } else if (n === 'どうのつるぎ') {
       r(right ? x0 : x0 + 8, 15, 3, 1, '#5a3414');
       r(right ? x0 + 3 : x0 + 6, 14, 1, 3, '#c8a030');
       r(right ? x0 + 4 : x0, 15, 6, 1, '#e0a850');
@@ -2015,7 +2137,7 @@ function drawMenu() {
     text('Ｅ ' + (hero.weapon || 'なし'), x + 50, y + 368, 20);
     text('Ｅ ' + (hero.armor || 'なし') + '／' + (hero.shield || 'なし'), x + 50, y + 396, 20);
   } else {
-    const gear = JOBS[a.job].gear.split('・');
+    const gear = gearOf(a).split('・');
     text('Ｅ ' + gear[0], x + 50, y + 368, 20);
     text('Ｅ ' + (gear[1] || 'なし'), x + 50, y + 396, 20);
   }
@@ -2033,7 +2155,7 @@ function drawMenu() {
       text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 20, 17,
            dead ? '#ff8060' : '#fff');
       text(`こうげき力 ${atkOf(m)}　しゅび力 ${dfnOf(m)}`, x + 56, yy + 40, 17);
-      text(`そうび ${JOBS[m.job].gear}`, x + 56, yy + 60, 17, '#aac');
+      text(`そうび ${gearOf(m)}`, x + 56, yy + 60, 17, '#aac');
     });
   }
 
