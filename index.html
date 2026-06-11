@@ -1405,9 +1405,9 @@ const ENEMIES = {
                       breath:true, tame:'dragon' },
   '魔王':         { hp:220, atk:40, def:22, agi:18, exp:350, gold:800, art:'demon',
                       spell:true, breath:true, boss:true },
-  'ゾウユウ':       { hp:550, atk:60, def:40, agi:30, exp:0, gold:0, art:'zouyu',
+  'ゾウユウ':       { hp:420, atk:52, def:34, agi:30, exp:0, gold:0, art:'zouyu',
                       spell:true, breath:true, trueBoss:true, phase2:'ゾウユウ・真体' },
-  'ゾウユウ・真体': { hp:550, atk:68, def:44, agi:34, exp:1500, gold:5000, art:'zouyu',
+  'ゾウユウ・真体': { hp:480, atk:58, def:38, agi:32, exp:1500, gold:5000, art:'zouyu',
                       spell:true, breath:true, trueBoss:true, big:true, dark:true,
                       pal:{K:'#0a0006',B:'#ff4060',C:'#ffffff',D:'#0c0c14',W:'#1a1024',L:'#ff8090',S:'#d8b090'} },
 };
@@ -2318,8 +2318,9 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
   const t = targets[Math.floor(Math.random() * targets.length)];
   const after = () => afterEnemy(t, k);
   let act = 'atk';
-  if (en.spell && Math.random() < 0.35) act = 'spark';
-  if (en.breath && Math.random() < 0.35) act = 'fire';
+  const aoeRate = en.trueBoss ? 0.25 : 0.35;  // ゾウユウの大技は控えめの頻度に
+  if (en.spell && Math.random() < aoeRate) act = 'spark';
+  if (en.breath && Math.random() < aoeRate) act = 'fire';
   // ---- ボスは パーティ全体への 大技を 使う ----
   const aoeHit = (lo, hi) => {  // 全員にダメージ、ページと戦闘不能者を返す
     const lines = [], downs = [];
@@ -2344,7 +2345,7 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
     battle.bolt = 22;
     battle.boltXs = [-150, 0, 150];
     battle.shake = 20;
-    const r2 = aoeHit(en.trueBoss ? 13 : 9, en.trueBoss ? 22 : 16);
+    const r2 = aoeHit(en.trueBoss ? 10 : 9, en.trueBoss ? 17 : 16);
     seDamage();
     msg([`${foe.name}は ${en.trueBoss ? '闇の稲妻の嵐' : '稲妻の嵐'}を 呼び寄せた！`, r2.page], afterAoe(r2.downs));
     return;
@@ -2353,7 +2354,7 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
     seSpark();
     battle.flame = 22;
     battle.shake = 20;
-    const r2 = aoeHit(en.trueBoss ? 16 : 10, en.trueBoss ? 26 : 18);
+    const r2 = aoeHit(en.trueBoss ? 12 : 10, en.trueBoss ? 20 : 18);
     seDamage();
     msg([`${foe.name}は ${en.trueBoss ? '漆黒の業火' : '地獄の炎'}を 吐いた！\n灼熱の波が 全員を 包み込む！`, r2.page], afterAoe(r2.downs));
     return;
