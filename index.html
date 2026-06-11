@@ -1451,10 +1451,6 @@ function startBattle(name, terrain) {
 }
 const BCMDS = ['たたかう','じゅもん','どうぐ','にげる'];
 function updateBattle() {
-  if (battle.shake > 0) battle.shake--;
-  if (battle.enFlash > 0) battle.enFlash--;
-  if (battle.fx > 0) battle.fx--;
-  if (battle.slash > 0) battle.slash--;
   if (battle.mode === 'intro') {
     if (--battle.intro <= 0) {
       battle.mode = 'wait';
@@ -1733,6 +1729,12 @@ function update() {
     }
     justPressed.clear();
     return;
+  }
+  if (battle) {  // 戦闘エフェクトはメッセージ中でも進める(残りっぱなし防止)
+    if (battle.shake > 0) battle.shake--;
+    if (battle.enFlash > 0) battle.enFlash--;
+    if (battle.fx > 0) battle.fx--;
+    if (battle.slash > 0) battle.slash--;
   }
   if (choice) updateChoice();
   else if (dialog) updateDialog();
