@@ -877,6 +877,7 @@ const dfn = () => Math.floor(LVT[hero.lv].agi / 2)
 const JOBS = {
   warrior: {
     name:'ガロン', label:'せんし', atkBonus:4, defBonus:6,
+    gear:'バトルアクス・てつのよろい',
     pal:{ hair:'#7a2818', skin:'#e8b878', cloth:'#b03828', legs:'#583020' },
     lvt:[null,
       {hp:20,mp:0,str:6, agi:3}, {hp:26,mp:0,str:8, agi:4}, {hp:30,mp:0,str:11,agi:5},
@@ -888,6 +889,7 @@ const JOBS = {
   },
   mage: {
     name:'ミリア', label:'まほうつかい', atkBonus:1, defBonus:2, caster:true,
+    gear:'かしのつえ・ぬののローブ',
     pal:{ hair:'#5038b8', skin:'#f0d8b8', cloth:'#7a50d0', legs:'#4a3090' },
     lvt:[null,
       {hp:12,mp:8, str:2, agi:5}, {hp:15,mp:12,str:3, agi:7}, {hp:17,mp:16,str:4, agi:10},
@@ -1732,7 +1734,7 @@ function drawShop() {
   });
 }
 function drawMenu() {
-  const x = 40, y = 40, w = 380, h = 470;
+  const x = 40, y = 40, w = 380, h = 430;
   drawWindow(x, y, w, h);
   text('つよさ', x + 30, y + 22, 22, '#ffd860');
   const L = [
@@ -1742,21 +1744,25 @@ function drawMenu() {
     ['こうげき力', atk()], ['しゅび力', dfn()], ['ゴールド', hero.gold + 'Ｇ'],
   ];
   L.forEach(([k, v], i) => {
-    text(k, x + 36, y + 62 + i * 36, 22);
-    text(String(v), x + w - 40, y + 62 + i * 36, 22, '#fff', 'right');
+    text(k, x + 36, y + 60 + i * 34, 22);
+    text(String(v), x + w - 40, y + 60 + i * 34, 22, '#fff', 'right');
   });
-  text('そうび', x + 30, y + 360, 22, '#ffd860');
-  text('Ｅ ' + (hero.weapon || 'なし'), x + 50, y + 392, 20);
-  text('Ｅ ' + (hero.armor || 'なし') + '／' + (hero.shield || 'なし'), x + 50, y + 420, 20);
+  text('そうび', x + 30, y + 336, 22, '#ffd860');
+  text('Ｅ ' + (hero.weapon || 'なし'), x + 50, y + 368, 20);
+  text('Ｅ ' + (hero.armor || 'なし') + '／' + (hero.shield || 'なし'), x + 50, y + 396, 20);
 
   if (party.length) {
-    const y3 = y + 484, h3 = party.length * 60 + 44;
+    const y3 = y + 444, h3 = party.length * 82 + 48;
     drawWindow(x, y3, w, h3);
-    text('なかま', x + 30, y3 + 18, 22, '#ffd860');
+    text('なかま', x + 30, y3 + 14, 22, '#ffd860');
     party.forEach((m, i) => {
-      const yy = y3 + 50 + i * 60;
-      text(`${m.name}（${JOBS[m.job].label}）`, x + 36, yy, 20, m.hp > 0 ? '#fff' : '#ff8060');
-      text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 28, 18, '#ccd');
+      const yy = y3 + 44 + i * 82;
+      const dead = m.hp <= 0;
+      text(`${m.name}（${JOBS[m.job].label}）`, x + 36, yy, 19, dead ? '#ff8060' : '#ffd860');
+      text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 20, 17,
+           dead ? '#ff8060' : '#fff');
+      text(`こうげき力 ${atkOf(m)}　しゅび力 ${dfnOf(m)}`, x + 56, yy + 40, 17);
+      text(`そうび ${JOBS[m.job].gear}`, x + 56, yy + 60, 17, '#aac');
     });
   }
 
