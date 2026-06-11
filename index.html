@@ -1716,7 +1716,7 @@ function startBattle(name, terrain) {
   const foes = ENEMIES[name].boss ? ['ウィッチ', name, 'サキュバス'].map(mk) : [mk(name)];
   battle = { foes, terrain, mode:'intro', sel:0, ssel:0, isel:0, tsel:0, pending:null,
              intro:22, shake:0, fx:0, slash:0, slashX:false,
-             slashHue:'white', bolt:0, fxX:0 };
+             slashHue:'white', bolt:0, boltXs:null, flame:0, fxX:0 };
   state = 'battle';
   seEncount();
   setTrack('battle');
@@ -1855,6 +1855,7 @@ function heroSpark(foe) {
   if (hero.blessed) {  // 覚醒後のスパークは 稲妻と なる
     seThunder();
     battle.bolt = 20;
+    battle.boltXs = [foeOffset(foe)];
     dmg = randInt(18, 30);
     pages.push(`天から 稲妻が 降り注ぐ！\n${foe.name}に ${dmg}の ダメージ！`);
   } else {
@@ -1905,7 +1906,7 @@ function companionsAct(i) {  // 仲間は じどうで 戦う
   if (j.caster && hero.blessed && m.mp >= 8 && Math.random() < 0.75) {
     m.mp -= 8;  // 覚醒後は 上位魔法ライトニング
     const foe = pickFoe();
-    seThunder(); battle.bolt = 20; battle.fxX = foeOffset(foe);
+    seThunder(); battle.bolt = 20; battle.boltXs = [foeOffset(foe)]; battle.fxX = foeOffset(foe);
     const dmg = randInt(22, 34);
     const pages = [`${m.name}は ライトニングを 唱えた！`,
                    `稲妻が ${foe.name}を 貫く！\n${dmg}の ダメージ！`];
@@ -1935,7 +1936,7 @@ function companionsAct(i) {  // 仲間は じどうで 戦う
   }
   if (!j.caster && !j.breath && hero.blessed && Math.random() < 0.35) {  // 雷神の斧 の 必殺
     const foe = pickFoe();
-    seThunder(); battle.bolt = 20; battle.fxX = foeOffset(foe);
+    seThunder(); battle.bolt = 20; battle.boltXs = [foeOffset(foe)]; battle.fxX = foeOffset(foe);
     const base = atkOf(m) - Math.floor(foe.en.def / 2);
     const dmg = Math.max(2, Math.floor(randInt(Math.floor(base / 4), Math.floor(base / 2)) * 1.8));
     const pages = [`${m.name}の 必殺！ 稲妻斬り！`, `${foe.name}に ${dmg}の ダメージ！`];
@@ -1979,18 +1980,56 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
   let act = 'atk';
   if (en.spell && Math.random() < 0.35) act = 'spark';
   if (en.breath && Math.random() < 0.35) act = 'fire';
+  // ---- ボスは パーティ全体への 大技を 使う ----
+  const aoeHit = (lo, hi) => {  // 全員にダメージ、ページと戦闘不能者を返す
+    const lines = [], downs = [];
+    for (const a of targets) {
+      const d = randInt(lo, hi);
+      a.hp -= d;
+      lines.push(`${a.name}は ${d}ダメージ！`);
+      if (a.hp <= 0 && a !== hero) downs.push(a);
+    }
+    const rows = [];
+    for (let i = 0; i < lines.length; i += 2) rows.push(lines.slice(i, i + 2).join('　'));
+    return { page: rows.join('\n'), downs };
+  };
+  const afterAoe = downs => () => {
+    if (hero.hp <= 0) { hero.hp = 0; died(); return; }
+    downs.forEach(a => { a.hp = 0; });
+    if (downs.length) msg([downs.map(a => `${a.name}は 力尽きた！`).join('\n')], () => enemyActAt(k + 1));
+    else enemyActAt(k + 1);
+  };
+  if (act === 'spark' && (en.boss || en.trueBoss)) {  // 稲妻の嵐(全体)
+    seThunder();
+    battle.bolt = 22;
+    battle.boltXs = [-150, 0, 150];
+    battle.shake = 20;
+    const r2 = aoeHit(en.trueBoss ? 13 : 9, en.trueBoss ? 22 : 16);
+    seDamage();
+    msg([`${foe.name}は ${en.trueBoss ? '闇の稲妻の嵐' : '稲妻の嵐'}を 呼び寄せた！`, r2.page], afterAoe(r2.downs));
+    return;
+  }
+  if (act === 'fire' && (en.boss || en.trueBoss)) {  // 業火の波(全体)
+    seSpark();
+    battle.flame = 22;
+    battle.shake = 20;
+    const r2 = aoeHit(en.trueBoss ? 14 : 10, en.trueBoss ? 24 : 18);
+    seDamage();
+    msg([`${foe.name}は ${en.trueBoss ? '漆黒の業火' : '地獄の炎'}を 吐いた！\n灼熱の波が 全員を 包み込む！`, r2.page], afterAoe(r2.downs));
+    return;
+  }
   if (act === 'spark') {
     seSpark(); battle.fx = 14;
-    const dmg = en.trueBoss ? randInt(20, 32) : en.boss ? randInt(14, 24) : randInt(4, 9);
+    const dmg = randInt(4, 9);
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${foe.name}は ${en.trueBoss ? '闇の稲妻を 放った' : 'スパークを 唱えた'}！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
+    msg([`${foe.name}は スパークを 唱えた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
     return;
   }
   if (act === 'fire') {
     seSpark(); battle.fx = 14;
-    const dmg = en.trueBoss ? randInt(24, 38) : en.boss ? randInt(16, 28) : randInt(6, 11);
+    const dmg = randInt(6, 11);
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${foe.name}は ${en.trueBoss ? '漆黒の業火' : en.boss ? '地獄の炎' : '炎'}を はいた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
+    msg([`${foe.name}は 炎を はいた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], after);
     return;
   }
   const base = en.atk - Math.floor(dfnOf(t) / 2);
@@ -2135,6 +2174,7 @@ function update() {
     if (battle.fx > 0) battle.fx--;
     if (battle.slash > 0) battle.slash--;
     if (battle.bolt > 0) battle.bolt--;
+    if (battle.flame > 0) battle.flame--;
   }
   if (choice) updateChoice();
   else if (dialog) updateDialog();
@@ -2638,33 +2678,61 @@ function drawBattle() {
       }
     }
   }
-  if (battle.bolt > 0) {  // 稲妻
-    const cx = SX + SW / 2 + (battle.fxX || 0), cy = SY + 215;
-    const t = 20 - battle.bolt;
+  if (battle.bolt > 0) {  // 稲妻(複数同時対応)
+    const xs = (battle.boltXs && battle.boltXs.length) ? battle.boltXs : [battle.fxX || 0];
+    const t = 22 - battle.bolt;
     if (battle.bolt > 14 && tick % 2) {  // 直撃の白フラッシュ
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fillRect(SX, SY, SW, SH);
     }
-    if (battle.bolt > 6) {  // ジグザグの稲妻本体
-      const boltPath = () => {
-        ctx.beginPath();
-        ctx.moveTo(cx, SY - 6);
-        for (let i = 1; i <= 6; i++) {
-          const xx = i === 6 ? cx : cx + rnd(i, Math.floor(tick / 3), 77) * 56 - 28;
-          ctx.lineTo(xx, SY - 6 + (cy + 40 - SY) * i / 6);
-        }
-      };
-      ctx.strokeStyle = 'rgba(140,220,255,0.7)'; ctx.lineWidth = 11; boltPath(); ctx.stroke();
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; boltPath(); ctx.stroke();
+    xs.forEach((ox, bi) => {
+      const cx = SX + SW / 2 + ox, cy = SY + 215;
+      if (battle.bolt > 6) {  // ジグザグの稲妻本体
+        const boltPath = () => {
+          ctx.beginPath();
+          ctx.moveTo(cx, SY - 6);
+          for (let i = 1; i <= 6; i++) {
+            const xx = i === 6 ? cx : cx + rnd(i + bi * 7, Math.floor(tick / 3), 77) * 56 - 28;
+            ctx.lineTo(xx, SY - 6 + (cy + 40 - SY) * i / 6);
+          }
+        };
+        ctx.strokeStyle = 'rgba(140,220,255,0.7)'; ctx.lineWidth = 11; boltPath(); ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; boltPath(); ctx.stroke();
+      }
+      const rr = t * 8;  // 着弾の衝撃リング
+      ctx.strokeStyle = `rgba(255,240,140,${Math.max(0, 1 - t / 16)})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(cx, cy + 55, rr, rr * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = `rgba(180,240,255,${Math.max(0, 0.9 - t / 14)})`;  // 散る火花
+      for (let i = 0; i < 7; i++) {
+        const ang = i * 0.9 + t * 0.1;
+        ctx.fillRect(cx + Math.cos(ang) * rr * 0.9 - 3, cy + 30 + Math.sin(ang) * rr * 0.3 - 3, 5, 5);
+      }
+    });
+  }
+  if (battle.flame > 0) {  // 業火の波(全体攻撃)
+    const fp = 1 - battle.flame / 22;
+    if (battle.flame > 16 && tick % 2) {
+      ctx.fillStyle = 'rgba(255,110,30,0.5)';
+      ctx.fillRect(SX, SY, SW, SH);
     }
-    const rr = t * 8;  // 着弾の衝撃リング
-    ctx.strokeStyle = `rgba(255,240,140,${Math.max(0, 1 - t / 16)})`;
-    ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.ellipse(cx, cy + 55, rr, rr * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = `rgba(180,240,255,${Math.max(0, 0.9 - t / 14)})`;  // 散る火花
-    for (let i = 0; i < 7; i++) {
-      const ang = i * 0.9 + t * 0.1;
-      ctx.fillRect(cx + Math.cos(ang) * rr * 0.9 - 3, cy + 30 + Math.sin(ang) * rr * 0.3 - 3, 5, 5);
+    const fa = Math.max(0, 1 - fp * 1.1);
+    for (let i = 0; i < 12; i++) {
+      const fx2 = SX + 22 + i * 38 + (i % 2) * 9;
+      const h = (60 + rnd(i, Math.floor(tick / 2), 99) * 90) * (1 - fp * 0.55);
+      const base = SY + 300;
+      ctx.fillStyle = `rgba(232,64,32,${fa * 0.8})`;
+      ctx.fillRect(fx2 - 9, base - h * 0.62, 18, h * 0.62);
+      ctx.fillStyle = `rgba(255,136,48,${fa * 0.85})`;
+      ctx.fillRect(fx2 - 6, base - h * 0.85, 12, h * 0.6);
+      ctx.fillStyle = `rgba(255,216,96,${fa})`;
+      ctx.fillRect(fx2 - 2, base - h, 5, h * 0.45);
+    }
+    ctx.fillStyle = `rgba(255,240,150,${fa})`;  // 舞う火の粉
+    for (let i = 0; i < 10; i++) {
+      const px2 = SX + rnd(i, 5, 31) * SW;
+      const py2 = SY + 290 - ((tick * (2 + rnd(i, 9, 33) * 3) + i * 47) % 240);
+      ctx.fillRect(px2, py2, 4, 4);
     }
   }
   ctx.restore();
