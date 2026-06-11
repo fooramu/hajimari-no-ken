@@ -183,5 +183,19 @@ frames(5); H.press('KeyZ'); frames(10);
 ok(H.player.tx === 11 && H.player.ty === 13, '続きからで記録地点に復帰');
 ok(H.hero.gold === 777, '続きからでステータス復元 (gold=' + H.hero.gold + ')');
 
+// ---- 10. 強くてニューゲーム ----
+console.log('# 強くてニューゲーム');
+H.hero.trueCleared = true; H.hero.cleared = true;
+H.hero.lv = 9; H.hero.gold = 5000; H.hero.weapon = '神の剣';
+const partySizeBefore = H.party.length;
+H.ngPlus();
+frames(30);
+for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); }
+ok(H.hero.cleared === false && H.hero.trueCleared === false, '物語フラグがリセットされる');
+ok(H.hero.lap === 2, '2周目になる (lap=' + H.hero.lap + ')');
+ok(H.hero.lv === 9 && H.hero.gold === 5000 && H.hero.weapon === '神の剣', 'レベル・ゴールド・装備を引き継ぐ');
+ok(H.party.length === partySizeBefore, '仲間を引き継ぐ');
+ok(H.player.tx === 9 && H.player.ty === 11, '町の開始地点に戻る');
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} 件失敗`);
 process.exit(failures === 0 ? 0 : 1);

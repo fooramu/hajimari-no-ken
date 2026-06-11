@@ -1230,7 +1230,7 @@ const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? '
 
 const hero = {
   name:'勇者', lv:1, exp:0, hp:16, mp:0, gold:120,
-  weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false, trueCleared:false,
+  weapon:null, armor:null, shield:null, inv:{}, cleared:false, blessed:false, trueCleared:false, lap:1,
   pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
 };
 const maxHp = () => LVT[hero.lv].hp;
@@ -1393,7 +1393,7 @@ function save() {
     localStorage.setItem('hajimari_save', JSON.stringify({
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
-      cleared:hero.cleared, blessed:hero.blessed, trueCleared:hero.trueCleared,
+      cleared:hero.cleared, blessed:hero.blessed, trueCleared:hero.trueCleared, lap:hero.lap,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
       pos: { map:mapId, x:player.tx, y:player.ty },
     }));
@@ -1410,6 +1410,7 @@ function loadSave() {
     hero.cleared = !!d.cleared;
     hero.blessed = !!d.blessed;
     hero.trueCleared = !!d.trueCleared;
+    hero.lap = d.lap || 1;
     // 旧バージョンのかな表記アイテムを漢字名へ移行
     const RENAMES = {
       'ひのきのぼう':'ひのきの棒', 'こんぼう':'こん棒', 'どうのつるぎ':'銅の剣',
@@ -1442,7 +1443,7 @@ function newGame() {
   hero.hp = 16; hero.mp = 0;
   hero.weapon = 'ひのきの棒';
   hero.armor = hero.shield = null;
-  hero.inv = {}; hero.cleared = false; hero.blessed = false; hero.trueCleared = false;
+  hero.inv = {}; hero.cleared = false; hero.blessed = false; hero.trueCleared = false; hero.lap = 1;
   party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
@@ -1500,6 +1501,21 @@ function onArrive() {
     return;
   }
   if (tileAt(mapId, player.tx, player.ty) === 's') {
+    if (hero.trueCleared) {  // 真の英雄には 強くてニューゲームを 促す
+      msgC(["魔法陣が ひときわ 強く 輝いている…\n真の英雄よ、どうする？"],
+           ["記録する", "強くてニューゲーム", "やめておく"], i => {
+        if (i === 0) {
+          save();
+          seSave();
+          msg(["冒険の書に 記録した！\n次は ここから 再開できる。"]);
+        } else if (i === 1) {
+          msgC(["能力・装備・仲間を 引き継いで\n物語を 最初から 始めますか？"], ["始める", "やめておく"], j => {
+            if (j === 0) ngPlus();
+          });
+        }
+      });
+      return;
+    }
     msgC(["魔法陣が 温かく 光っている…\n冒険の書に 記録しますか？"], ["記録する","やめておく"], i => {
       if (i !== 0) return;
       save();
@@ -1509,6 +1525,20 @@ function onArrive() {
     return;
   }
   if (mapId === 'world') checkEncounter();
+}
+function ngPlus() {  // 強くてニューゲーム: 能力を 引き継いで 物語をリセット
+  hero.cleared = false;
+  hero.trueCleared = false;
+  hero.lap = (hero.lap || 1) + 1;
+  seLevelUp();
+  startFade(() => {
+    teleport('town', 9, 11, 'up');
+    save();
+  }, () => {
+    msg(["時が 巻き戻り 世界に 再び 闇が 満ちる…",
+         `${hero.lap}周目の 冒険が 始まった！\n（能力・装備・仲間は 引き継ぎ）`,
+         "もう一度 魔王を 倒し\n世界を 救おう！"]);
+  });
 }
 function stepToward(e) {
   const gx = e.tx * T, gy = e.ty * T;
@@ -2581,7 +2611,8 @@ function drawMenu() {
     text(`◀ ${a.name} ▶`, x + w - 40, y + 22, 20, '#8ae0ff', 'right');
   }
   const L = a === hero ? [
-    ['ＬＶ', hero.lv], ['ＨＰ', hero.hp + '/' + maxHp()], ['ＭＰ', hero.mp + '/' + maxMp()],
+    ['ＬＶ', hero.lv + (hero.lap > 1 ? `（${hero.lap}周目）` : '')],
+    ['ＨＰ', hero.hp + '/' + maxHp()], ['ＭＰ', hero.mp + '/' + maxMp()],
     ['経験値', hero.exp],
     ['次のＬＶ', hero.lv < MAXLV ? LVT[hero.lv + 1].exp - hero.exp : '--'],
     ['攻撃力', atk()], ['守備力', dfn()], ['ゴールド', hero.gold + 'Ｇ'],
@@ -2935,7 +2966,7 @@ loop();
 
 if (typeof globalThis.__TEST_HOOK === 'function') {
   globalThis.__TEST_HOOK({
-    MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion, player, save, loadSave, continueGame,
+    MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion, player, save, loadSave, continueGame, ngPlus,
     getState: () => state,
     getBattle: () => battle,
     press: c => { justPressed.add(c); },
