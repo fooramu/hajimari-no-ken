@@ -801,14 +801,14 @@ function genWorld() {
       }
       if (Math.abs(x - 20) <= 2 && Math.abs(y - 8) <= 2) ch = 'G';
       if (Math.abs(x - 20) <= 1 && Math.abs(y - 23) <= 1) ch = 'G';
-      if (Math.abs(x - 15) <= 1 && Math.abs(y - 5) <= 1) ch = 'G';
+      if (Math.abs(x - 7) <= 1 && Math.abs(y - 4) <= 1) ch = 'G';
       s += ch;
     }
     rows.push(s);
   }
   rows[8] = rows[8].slice(0, 20) + 'A' + rows[8].slice(21);
   rows[23] = rows[23].slice(0, 20) + 'c' + rows[23].slice(21);
-  rows[5] = rows[5].slice(0, 15) + 'n' + rows[5].slice(16);
+  rows[4] = rows[4].slice(0, 7) + 'n' + rows[4].slice(8);
   return rows;
 }
 
@@ -856,7 +856,7 @@ const MAPS = {
         lines:["この さきは ワールドマップだ。",
                "そこの ひかる まほうじんに のれば\nぼうけんのしょに きろく できるぞ。",
                "とおくへ いくほど つよい まものが でる。\nまずは まちの ちかくで レベルあげだ。",
-               "きたにしの しんでんには ふるき かみが すむ。\n３にんで ゆけば なにかが おこるという…",
+               "はるか にしのはての しんでんには\nふるき かみが すむ。\n３にんで ゆけば なにかが おこるという…",
                "はるか みなみには まおうの しろが…\nいくなら なかまと そなえを わすれるな！",
                "しんでも ゴールドが はんぶんに なるだけだ。\nきがるに いってこい！"] },
     ],
@@ -984,7 +984,7 @@ const MAPS = {
       "####D####",
     ],
     track: 'title',
-    warps: { "4,6": { map:'world', x:15, y:6, dir:'down' } },
+    warps: { "4,6": { map:'world', x:7, y:5, dir:'down' } },
     npcs: [
       { tx:4, ty:2, dir:'down', god:true, sprite:'mage',
         pal:{hair:'#e8e4f0',skin:'#f0d8b8',cloth:'#f0ead8',legs:'#c8c0a8'} },
@@ -996,7 +996,7 @@ const MAPS = {
     warps: {
       "20,8":  { map:'town',   x:9, y:13, dir:'up' },
       "20,23": { map:'castle', x:6, y:7,  dir:'up' },
-      "15,5":  { map:'temple', x:4, y:5,  dir:'up' },
+      "7,4":   { map:'temple', x:4, y:5,  dir:'up' },
     },
     npcs: [],
   },
@@ -1878,6 +1878,21 @@ function drawChara(e, cam) {
   };
   const kind = e.sprite || (e === player ? 'hero' : 'villager');
   const bl = hero.blessed && (kind === 'hero' || kind === 'warrior' || kind === 'mage');
+  if (bl) {  // 燃えあがる 金のオーラ
+    ctx.fillStyle = 'rgba(255,216,72,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(x + 12 * u, y + 11 * u + bob, 13 * u, 14 * u, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const FLAMES = [
+      [[0,5,2,12],[22,7,2,11],[2,0,2,5],[20,1,2,5],[5,-3,2,4],[17,-2,2,4],[10,-5,3,5],[0,16,2,5],[22,15,2,5]],
+      [[0,8,2,11],[22,5,2,12],[2,2,2,5],[20,-1,2,5],[6,-4,2,5],[16,-4,2,4],[11,-4,2,4],[1,14,2,6],[21,17,2,4]],
+      [[0,6,2,13],[22,6,2,13],[2,-2,2,6],[20,2,2,4],[4,-2,2,4],[18,-3,2,5],[10,-6,2,5],[13,-4,2,4],[1,17,2,4],[21,14,2,5]],
+    ];
+    for (const [fx, fy, fw, fh] of FLAMES[Math.floor(tick / 4) % 3]) {
+      r(fx, fy, fw, fh, 'rgba(255,196,40,0.5)');
+      r(fx, fy, fw, 2, 'rgba(255,244,160,0.65)');
+    }
+  }
   if (kind === 'hero') {
     // マント(覚醒で 白銀に)
     const cape = bl ? '#f0f0f8' : '#b02828';
