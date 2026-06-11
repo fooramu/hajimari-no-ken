@@ -278,6 +278,15 @@ const TRACKS = {
   castle: { bpm:84, drums:'k.......',
     chords:[['E3','G3','B3'],['F3','A3','C4'],['B2','D#3','F#3'],['E3','G3','B3']],
     mel:[['E4',2],['F#4',1],['G4',1], ['F4',2],['E4',2], ['D#4',2],['F#4',2], ['E4',3],[null,1]] },
+  boss: { bpm:64, drums:'k.......k...s...',  // 魔王戦: 遅く 重い 恐怖
+    chords:[['E3','G3','B3'],['C3','E3','G3'],['A2','C3','E3'],['B2','D#3','F#3']],
+    mel:[['E4',3],['F#4',1], ['G4',2],['F#4',2], ['E4',2],['C4',2], ['B3',3],[null,1]] },
+  tech: { bpm:152, drums:'k.hsk.hs',  // ゾウユウ戦: 高音テクノの恐怖
+    chords:[['E4','G4','B4'],['D#4','F#4','B4'],['E4','G4','C5'],['F4','G#4','B4']],
+    mel:[['E6',.5],['B5',.5],['G5',.5],['B5',.5],['E6',.5],['B5',.5],['G6',.5],['F#6',.5],
+         ['D#6',.5],['B5',.5],['F#5',.5],['B5',.5],['D#6',.5],['B5',.5],['F#6',.5],['E6',.5],
+         ['E6',.5],['C6',.5],['G5',.5],['C6',.5],['E6',.5],['C6',.5],['G6',.5],['E6',.5],
+         ['F6',.5],['B5',.5],['G#5',.5],['B5',.5],['F6',1],['E6',.5],['D#6',.5]] },
 };
 function playTrack(name) {
   curTrack = name;
@@ -1891,14 +1900,27 @@ function useEntry(en) {
 /* ================= 戦闘 ================= */
 function startBattle(name, terrain) {
   const mk = n => ({ name:n, en:ENEMIES[n], hp:ENEMIES[n].hp, flash:0, fled:false });
-  // 魔王は 親衛隊２体を 引き連れて 現れる
-  const foes = ENEMIES[name].boss ? ['ウィッチ', name, 'サキュバス'].map(mk) : [mk(name)];
+  const e0 = ENEMIES[name];
+  let foes;
+  if (e0.boss) {
+    foes = ['ウィッチ', name, 'サキュバス'].map(mk);  // 魔王は 親衛隊２体を 引き連れる
+  } else if (e0.trueBoss || e0.tame) {
+    foes = [mk(name)];  // ゾウユウとドラゴンは 一騎打ち
+  } else {
+    const n = randInt(1, 3);  // 雑魚は １〜３体で 現れる
+    foes = [];
+    for (let i = 0; i < n; i++) {
+      const f = mk(name);
+      if (n > 1) f.name = name + ['Ａ', 'Ｂ', 'Ｃ'][i];
+      foes.push(f);
+    }
+  }
   battle = { foes, terrain, mode:'intro', sel:0, ssel:0, isel:0, tsel:0, pending:null,
              intro:22, shake:0, fx:0, slash:0, slashX:false,
              slashHue:'white', bolt:0, boltXs:null, flame:0, fxX:0 };
   state = 'battle';
   seEncount();
-  setTrack('battle');
+  setTrack(e0.trueBoss ? 'tech' : e0.boss ? 'boss' : 'battle');
 }
 const BCMDS = ['戦う','呪文','道具','逃げる'];
 const aliveFoes = () => battle.foes.filter(f => f.hp > 0);
@@ -1926,6 +1948,11 @@ function updateBattle() {
     return;
   }
   if (battle.mode === 'cmd') {
+    if (hero.hp <= 0) {  // 勇者が戦闘不能でも 仲間が 戦い続ける
+      battle.mode = 'wait';
+      companionsAct(0);
+      return;
+    }
     if (pUp())   { battle.sel = (battle.sel + 3) % 4; seCursor(); }
     if (pDown()) { battle.sel = (battle.sel + 1) % 4; seCursor(); }
     if (pressed(CONFIRM)) {
@@ -2166,15 +2193,15 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
       const d = randInt(lo, hi);
       a.hp -= d;
       lines.push(`${a.name}は ${d}ダメージ！`);
-      if (a.hp <= 0 && a !== hero) downs.push(a);
+      if (a.hp <= 0) downs.push(a);
     }
     const rows = [];
     for (let i = 0; i < lines.length; i += 2) rows.push(lines.slice(i, i + 2).join('　'));
     return { page: rows.join('\n'), downs };
   };
   const afterAoe = downs => () => {
-    if (hero.hp <= 0) { hero.hp = 0; died(); return; }
     downs.forEach(a => { a.hp = 0; });
+    if (allAllies().every(a => a.hp <= 0)) { died(); return; }  // 全滅でゲームオーバー
     if (downs.length) msg([downs.map(a => `${a.name}は 力尽きた！`).join('\n')], () => enemyActAt(k + 1));
     else enemyActAt(k + 1);
   };
@@ -2221,9 +2248,9 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
   }
 }
 function afterEnemy(t, k) {
-  if (hero.hp <= 0) { hero.hp = 0; died(); return; }
-  if (t && t !== hero && t.hp <= 0) {
-    t.hp = 0;
+  if (t && t.hp <= 0) t.hp = 0;
+  if (allAllies().every(a => a.hp <= 0)) { died(); return; }  // 全滅でゲームオーバー
+  if (t && t.hp <= 0) {
     msg([`${t.name}は 力尽きた！`], () => enemyActAt(k + 1));
     return;
   }
@@ -2240,6 +2267,7 @@ function tryRun() {
 }
 function victory() {
   seVictory();
+  if (hero.hp <= 0) hero.hp = 1;  // 倒れていた勇者は なんとか 立ち上がる
   const kills = battle.foes.filter(f => !f.fled);
   const exp = kills.reduce((s, f) => s + f.en.exp, 0);
   const g = Math.max(1, Math.round(kills.reduce((s, f) => s + f.en.gold, 0) * (0.8 + Math.random() * 0.4)));
@@ -2322,13 +2350,14 @@ function levelChain(done) {
   } else done();
 }
 function endBattle() {
+  if (hero.hp <= 0) hero.hp = 1;  // 倒れていた勇者は なんとか 立ち上がる
   battle = null;
   state = 'field';
   noEncUntil = tick + 180;
   setTrack(map.track);
 }
 function died() {
-  msg(["目の前が 真っ暗に なった…"], () => {
+  msg(["一行は 全滅した…\n目の前が 真っ暗に なった…"], () => {
     hero.gold = Math.floor(hero.gold / 2);
     hero.hp = maxHp(); hero.mp = maxMp();
     for (const m of party) { m.hp = maxHpOf(m); m.mp = maxMpOf(m); }

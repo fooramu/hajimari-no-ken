@@ -214,6 +214,27 @@ H.setKey('ArrowUp', false);
 ok(H.player.ty < 5, '店内で移動できる (y=' + H.player.ty + ')');
 frames(10);
 
+// ---- 9.8 勇者が倒れても仲間が戦い続ける(全滅仕様) ----
+console.log('# 全滅仕様テスト');
+H.party.length = 0;
+H.party.push(H.makeCompanion('warrior'));
+H.hero.lv = 8;
+H.party[0].hp = 999;
+H.hero.gold = 1000;
+H.startBattle('ピクシー', 'grass');
+frames(35);  // 出現メッセージまで進める
+H.hero.hp = 0;  // 勇者だけ戦闘不能に
+guard = 0;
+while (H.getState() === 'battle' && guard < 4000) {
+  if (guard % 15 === 0) H.press('KeyZ');
+  rafCb();
+  guard++;
+}
+ok(H.getState() === 'field', '勇者が倒れても仲間が戦って終局する');
+ok(H.hero.gold >= 1000, '全滅ではないのでゴールドが半減しない (gold=' + H.hero.gold + ')');
+ok(H.hero.hp >= 1, '戦闘後に勇者は立ち上がる (hp=' + H.hero.hp + ')');
+for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); }
+
 // ---- 10. 強くてニューゲーム ----
 console.log('# 強くてニューゲーム');
 H.hero.trueCleared = true; H.hero.cleared = true;
