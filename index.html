@@ -1399,7 +1399,7 @@ const ENEMIES = {
                       breath:true, tame:'dragon' },
   '魔王':         { hp:220, atk:40, def:22, agi:18, exp:350, gold:800, art:'demon',
                       spell:true, breath:true, boss:true },
-  'ゾウユウ':       { hp:400, atk:52, def:30, agi:26, exp:999, gold:2500, art:'zouyu',
+  'ゾウユウ':       { hp:900, atk:60, def:40, agi:30, exp:1500, gold:5000, art:'zouyu',
                       spell:true, breath:true, trueBoss:true },
 };
 /* 魔王討伐後〜ゾウユウ討伐まで: ゾウユウに書き換えられた「闇の」モンスター */
@@ -2327,7 +2327,7 @@ function enemyActAt(k) {  // 敵が 1体ずつ 順に 行動する
     seSpark();
     battle.flame = 22;
     battle.shake = 20;
-    const r2 = aoeHit(en.trueBoss ? 14 : 10, en.trueBoss ? 24 : 18);
+    const r2 = aoeHit(en.trueBoss ? 16 : 10, en.trueBoss ? 26 : 18);
     seDamage();
     msg([`${foe.name}は ${en.trueBoss ? '漆黒の業火' : '地獄の炎'}を 吐いた！\n灼熱の波が 全員を 包み込む！`, r2.page], afterAoe(r2.downs));
     return;

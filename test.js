@@ -104,19 +104,26 @@ for (const w of ['ひのきの棒', 'こん棒', '銅の剣', null]) {
 // ---- 6. 全種の敵と戦闘(コマンド連打で終局まで) ----
 console.log('# 戦闘テスト');
 for (const name of Object.keys(H.ENEMIES)) {
-  H.hero.lv = 8;   // 強敵にも勝てるレベルで終局を検証
-  H.hero.hp = 999; // 検証用に死なない体力(内部値だけ)
+  H.hero.lv = 8;    // 強敵にも勝てるレベルで終局を検証
+  H.hero.hp = 9999; // 検証用に死なない体力(内部値だけ)
   H.hero.weapon = '銅の剣';
-  H.party.forEach(m => { m.hp = 999; m.mp = 99; });  // 途中で加わった仲間も回復
+  if (name === 'ゾウユウ') {  // 設計上ゾウユウは第二覚醒が前提の強さ
+    H.hero.blessed = true; H.hero.blessed2 = true;
+    H.hero.weapon = '終焉の剣';
+  }
+  H.party.forEach(m => { m.hp = 9999; m.mp = 99; });  // 途中で加わった仲間も回復
   H.startBattle(name, 'grass');
   let guard = 0;
-  while (H.getState() === 'battle' && guard < 8000) {
+  while (H.getState() === 'battle' && guard < 10000) {
     if (guard % 15 === 0) H.press('KeyZ');
     rafCb();
     guard++;
   }
   ok(H.getState() !== 'battle', `${name} 戦が終局 (${guard}フレーム)`);
 }
+H.hero.blessed = false; H.hero.blessed2 = false;  // 後続の神殿テストのため覚醒を解除
+H.hero.weapon = '銅の剣';
+delete H.hero.ach.bless1; delete H.hero.ach.bless2;
 ok(H.hero.cleared === true, '魔王討伐でクリアフラグが立つ');
 ok(H.hero.trueCleared === true, 'ゾウユウ討伐で真クリアフラグが立つ');
 ok(H.party.some(m => m.job === 'dragon'), 'ドラゴン戦の勝利でドラゴンが仲間に');
