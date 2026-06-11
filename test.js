@@ -77,7 +77,7 @@ ok(true, '冒頭メッセージ処理');
 tryDraw('町を 30フレーム描画', () => frames(30));
 
 // ---- 4. 各マップへテレポートして描画 ----
-for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'cave', 'world']) {
+for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'cave', 'ramen', 'world']) {
   const m = H.MAPS[id];
   let x = 4, y = 3;
   if (id === 'world') { x = 20; y = 9; }
