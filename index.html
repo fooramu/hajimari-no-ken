@@ -18,7 +18,7 @@
     <b>矢印 / WASD</b> いどう ｜ <b>Z / Enter / Space</b> けってい・はなす ｜
     <b>X / Esc</b> メニュー・キャンセル ｜ <b>M</b> BGM<br>
     町の南から ワールドマップへ。モンスターを たおして レベルを あげよう。宿屋で 回復＆セーブ。<br>
-    町の左下 <b>ルイーダの酒場</b>で 戦士と魔法使いを 仲間に できるよ。
+    町の左下 <b>ルイーダの酒場</b>で 戦士と魔法使いを 仲間に できるよ。はるか南の <b>魔王の城</b>を 目指せ！
   </div>
 </div>
 <script>
@@ -136,6 +136,9 @@ const TRACKS = {
   title: { beat:.38,
     mel:[['C4',1],['G4',1],['C5',1],['E5',1],['G5',3],['F5',1],['E5',2],['D5',2],['E5',1],['C5',3],[null,2]],
     bas:[['C3',2],['G2',2],['F2',2],['G2',2]] },
+  castle: { beat:.3,
+    mel:[['E4',2],['F4',2],['E4',2],['D4',2],['E4',2],['G4',2],['F4',2],['E4',4],['D4',2],['E4',2],['F4',2],['A4',2],['G4',2],['F4',2],['E4',6]],
+    bas:[['E2',2],['E2',2],['D2',2],['D2',2],['C2',2],['C2',2],['B1',2],['B1',2]] },
 };
 function playTrack(name) {
   curTrack = name;
@@ -299,6 +302,23 @@ const ART = {
     "....KSSSSSSK....",
     "...KKSSSSSSKK...",
     "...KKKKKKKKKK..."]},
+  demon: { pal:{K:'#140a18',H:'#e8d8c0',B:'#8a2440',R:'#ff4848',D:'#5e1830',W:'#38204a'}, rows:[
+    "..K..........K..",
+    ".KHK........KHK.",
+    ".KHHK.KKKK.KHHK.",
+    "..KHKKBBBBKKHK..",
+    "...KBBBBBBBBK...",
+    "..KBBRBBBBRBBK..",
+    "..KBBBBBBBBBBK..",
+    "..KBKHKHKHKBBK..",
+    ".KWBBKKKKKKBBWK.",
+    "KWWBBBBBBBBBBWWK",
+    "KWBBBDDBBDDBBBWK",
+    ".KBBBDBBBBDBBBK.",
+    "..KBBBBBBBBBBK..",
+    "..KBKBBBBBBKBK..",
+    "...KKBKKKKBKK...",
+    "....KKK..KKK...."]},
   sword: { pal:{K:'#222',W:'#e8eef8',L:'#aab4c8',G:'#c8a030',B:'#7a4a20'}, rows:[
     ".......KK.......",
     "......KWLK......",
@@ -546,6 +566,37 @@ function drawTile(ch, px, py, gx, gy) {
       r(6, 2, 3, 3, '#e0c088'); r(6, 2, 3, 1, '#ffffff'); r(9, 3, 1, 2, '#b08850');
       break;
     }
+    case 'c': {  // まおうの しろ(ワールドマップ)
+      grass();
+      r(2, 3, 3, 9, '#5a5a6e'); r(2, 2, 1, 1, '#44445a'); r(4, 2, 1, 1, '#44445a');
+      r(11, 3, 3, 9, '#5a5a6e'); r(11, 2, 1, 1, '#44445a'); r(13, 2, 1, 1, '#44445a');
+      r(4, 6, 8, 6, '#6e6e82'); r(4, 6, 8, 1, '#8a8a9e');
+      r(6, 1, 4, 6, '#6e6e82'); r(6, 1, 1, 1, '#8a8a9e'); r(9, 1, 1, 1, '#8a8a9e');
+      r(7, 0, 1, 2, '#44445a'); r(8, 0, 1, 1, '#c03030');
+      r(7, 3, 2, 2, '#ff5040');
+      r(3, 5, 1, 2, '#ff5040'); r(12, 5, 1, 2, '#ff5040');
+      r(7, 9, 2, 3, '#201828'); r(7, 9, 2, 1, '#100c18');
+      r(2, 12, 12, 1, '#44445a');
+      break;
+    }
+    case 'x': {  // 赤じゅうたん(魔王城)
+      drawTile('.', px, py, gx, gy);
+      r(2, 0, 12, 16, '#8c2030');
+      r(2, 0, 1, 16, '#5c1420'); r(13, 0, 1, 16, '#5c1420');
+      r(3, 0, 1, 16, '#a83848'); r(12, 0, 1, 16, '#a83848');
+      if (gy % 2 === 0) { r(7, 6, 2, 1, '#c8a030'); r(6, 7, 1, 1, '#c8a030'); r(9, 7, 1, 1, '#c8a030'); r(7, 8, 2, 1, '#c8a030'); }
+      break;
+    }
+    case 'g': {  // あくまの石像(魔王城)
+      drawTile('.', px, py, gx, gy);
+      r(3, 12, 10, 3, '#44445a'); r(4, 11, 8, 1, '#55556e');
+      r(4, 1, 1, 2, '#8a8a9e'); r(11, 1, 1, 2, '#8a8a9e');
+      r(5, 2, 6, 9, '#6e6e82'); r(5, 2, 6, 1, '#8a8a9e');
+      r(6, 4, 1, 1, '#ff5040'); r(9, 4, 1, 1, '#ff5040');
+      r(3, 5, 2, 4, '#55556e'); r(11, 5, 2, 4, '#55556e');
+      r(6, 7, 4, 1, '#55556e');
+      break;
+    }
     case 's': {  // セーブの まほうじん
       grass();
       const c1 = Math.floor(tick / 16) % 2 ? '#9ae8ff' : '#62c8f8';
@@ -582,11 +633,13 @@ function genWorld() {
             if (Math.hypot(x - cx, y - cy) < 3.0 + rnd(x, y, 13) * 2.0) ch = 'F';
       }
       if (Math.abs(x - 20) <= 2 && Math.abs(y - 8) <= 2) ch = 'G';
+      if (Math.abs(x - 20) <= 1 && Math.abs(y - 23) <= 1) ch = 'G';
       s += ch;
     }
     rows.push(s);
   }
   rows[8] = rows[8].slice(0, 20) + 'A' + rows[8].slice(21);
+  rows[23] = rows[23].slice(0, 20) + 'c' + rows[23].slice(21);
   return rows;
 }
 
@@ -634,6 +687,7 @@ const MAPS = {
         lines:["この さきは ワールドマップだ。",
                "そこの ひかる まほうじんに のれば\nぼうけんのしょに きろく できるぞ。",
                "とおくへ いくほど つよい まものが でる。\nまずは まちの ちかくで レベルあげだ。",
+               "はるか みなみには まおうの しろが…\nいくなら なかまと そなえを わすれるな！",
                "しんでも ゴールドが はんぶんに なるだけだ。\nきがるに いってこい！"] },
     ],
   },
@@ -730,10 +784,32 @@ const MAPS = {
         pal:{hair:'#5038b8',skin:'#f0d8b8',cloth:'#7a50d0',legs:'#4a3090'} },
     ],
   },
+  castle: {
+    grid: [
+      "#############",
+      "#g....x....g#",
+      "#.....x.....#",
+      "#..g..x..g..#",
+      "#.....x.....#",
+      "#..g..x..g..#",
+      "#.....x.....#",
+      "#g....x....g#",
+      "######D######",
+    ],
+    track: 'castle',
+    warps: { "6,8": { map:'world', x:20, y:24, dir:'down' } },
+    npcs: [
+      { tx:6, ty:2, dir:'down', boss:'まおう',
+        pal:{hair:'#2a1838',skin:'#b89ac8',cloth:'#581828',legs:'#2a1020'} },
+    ],
+  },
   world: {
     grid: genWorld(),
     track: 'field',
-    warps: { "20,8": { map:'town', x:9, y:13, dir:'up' } },
+    warps: {
+      "20,8":  { map:'town',   x:9, y:13, dir:'up' },
+      "20,23": { map:'castle', x:6, y:7,  dir:'up' },
+    },
     npcs: [],
   },
 };
@@ -741,13 +817,13 @@ const MAPS = {
 let mapId = 'town';
 let map = MAPS[mapId];
 
-const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e','r','k','h','z','m','q','a','j','t']);
+const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e','r','k','h','z','m','q','a','j','t','g']);
 const tileAt = (m, x, y) => {
   const g = MAPS[m].grid;
   if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return 'T';
   return g[y][x];
 };
-const npcGone = n => n.recruit && party.some(m => m.job === n.recruit);
+const npcGone = n => (n.recruit && party.some(m => m.job === n.recruit)) || (n.boss && hero.cleared);
 function entityAt(x, y) {
   for (const n of map.npcs) if (!npcGone(n) && n.tx === x && n.ty === y) return n;
   return null;
@@ -788,7 +864,7 @@ const slotOf = n => WEAPONS[n] ? 'weapon' : ARMORS[n] ? 'armor' : SHIELDS[n] ? '
 
 const hero = {
   name:'ゆうしゃ', lv:1, exp:0, hp:16, mp:0, gold:120,
-  weapon:null, armor:null, shield:null, inv:{},
+  weapon:null, armor:null, shield:null, inv:{}, cleared:false,
   pal:{ hair:'#3a2a18', skin:'#f0c890', cloth:'#3868d8', legs:'#28448a' },
 };
 const maxHp = () => LVT[hero.lv].hp;
@@ -858,6 +934,8 @@ const ENEMIES = {
   'がいこつ':       { hp:14, atk:11, def:6,  agi:7,  exp:8,  gold:16, art:'skel' },
   'まどうし':       { hp:13, atk:10, def:5,  agi:8,  exp:11, gold:22, art:'mage', spell:true },
   'ベビードラゴン': { hp:24, atk:15, def:10, agi:11, exp:20, gold:40, art:'drag', breath:true },
+  'まおう':         { hp:150, atk:34, def:18, agi:14, exp:250, gold:500, art:'demon',
+                      spell:true, breath:true, boss:true },
 };
 
 /* ================= プレイヤー・状態 ================= */
@@ -927,6 +1005,7 @@ function save() {
     localStorage.setItem('hajimari_save', JSON.stringify({
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
+      cleared:hero.cleared,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
       pos: { map:mapId, x:player.tx, y:player.ty },
     }));
@@ -940,6 +1019,7 @@ function loadSave() {
     const pos = d.pos;
     delete d.party; delete d.pos;
     Object.assign(hero, d);
+    hero.cleared = !!d.cleared;
     party.length = 0;
     for (const s of pd) {
       if (!JOBS[s.job]) continue;
@@ -959,7 +1039,7 @@ function newGame() {
   hero.hp = 16; hero.mp = 0;
   hero.weapon = 'ひのきのぼう';
   hero.armor = hero.shield = null;
-  hero.inv = {};
+  hero.inv = {}; hero.cleared = false;
   party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
@@ -1047,6 +1127,10 @@ function interact() {
     innTalk();
   } else if (npc.recruit) {
     recruitTalk(npc);
+  } else if (npc.boss) {
+    msg(["よくぞ ここまで きたな ちいさきもの…",
+         "この よの やみは すべて わがもの。\nおまえたちの たびは ここで おわりだ！"],
+        () => startBattle(npc.boss, 'castle'));
   } else {
     msg(npc.lines.slice());
   }
@@ -1392,16 +1476,16 @@ function enemyAct() {
   if (en.breath && Math.random() < 0.35) act = 'fire';
   if (act === 'spark') {
     seSpark(); battle.fx = 14;
-    const dmg = randInt(4, 9);
+    const dmg = en.boss ? randInt(10, 18) : randInt(4, 9);
     t.hp -= dmg; battle.shake = 14; seDamage();
     msg([`${battle.name}は スパークを となえた！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
     return;
   }
   if (act === 'fire') {
     seSpark(); battle.fx = 14;
-    const dmg = randInt(6, 11);
+    const dmg = en.boss ? randInt(12, 20) : randInt(6, 11);
     t.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}は ほのおを はいた！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
+    msg([`${battle.name}は ${en.boss ? 'じごくのほのお' : 'ほのお'}を はいた！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
     return;
   }
   const base = en.atk - Math.floor(dfnOf(t) / 2);
@@ -1435,9 +1519,20 @@ function victory() {
   const g = Math.max(1, Math.round(battle.en.gold * (0.8 + Math.random() * 0.4)));
   hero.gold += g;
   hero.exp += battle.en.exp;
+  const isBoss = battle.en.boss;
   msg([`${battle.name}を やっつけた！`,
        `けいけんち ${battle.en.exp}ポイント かくとく！\n${g}ゴールドを てにいれた！`],
-      () => levelChain(endBattle));
+      () => levelChain(isBoss ? bossVictory : endBattle));
+}
+function bossVictory() {
+  hero.cleared = true;
+  battle = null;
+  state = 'field';
+  setTrack(map.track);
+  seVictory();
+  msg(["まおうは ほろび せかいに\nひかりが もどった！",
+       `${hero.name}${party.length ? 'たち' : ''}の かつやくは\nえいえんに かたりつがれる だろう…`,
+       "🎉 おめでとう！ ぼうけんは クリアだ！\n（このあとも じゆうに あそべます）"]);
 }
 function levelChain(done) {
   if (hero.lv < MAXLV && hero.exp >= LVT[hero.lv + 1].exp) {
@@ -1688,16 +1783,17 @@ function drawBattle() {
 
   ctx.save();
   ctx.beginPath(); ctx.roundRect(SX, SY, SW, SH, 8); ctx.clip();
-  ctx.fillStyle = '#79b8ee'; ctx.fillRect(SX, SY, SW, SH);
-  ctx.fillStyle = '#94cdf6'; ctx.fillRect(SX, SY + 110, SW, 60);
-  ctx.fillStyle = '#b8e0fa'; ctx.fillRect(SX, SY + 170, SW, 30);
-  ctx.fillStyle = '#2a6e34';
+  const dark = battle.terrain === 'castle';
+  ctx.fillStyle = dark ? '#160c20' : '#79b8ee'; ctx.fillRect(SX, SY, SW, SH);
+  ctx.fillStyle = dark ? '#221432' : '#94cdf6'; ctx.fillRect(SX, SY + 110, SW, 60);
+  ctx.fillStyle = dark ? '#2e1c42' : '#b8e0fa'; ctx.fillRect(SX, SY + 170, SW, 30);
+  ctx.fillStyle = dark ? '#241a30' : '#2a6e34';
   for (let i = 0; i < 6; i++) {
     ctx.beginPath();
     ctx.ellipse(SX + 50 + i * 90, SY + 205, 70, 28, 0, Math.PI, 0);
     ctx.fill();
   }
-  ctx.fillStyle = battle.terrain === 'forest' ? '#33701f' : '#5aa83e';
+  ctx.fillStyle = dark ? '#3a3448' : battle.terrain === 'forest' ? '#33701f' : '#5aa83e';
   ctx.fillRect(SX, SY + 205, SW, SH - 205);
   ctx.fillStyle = 'rgba(0,0,0,0.12)';
   for (let i = 0; i < 4; i++) ctx.fillRect(SX, SY + 235 + i * 28, SW, 3);

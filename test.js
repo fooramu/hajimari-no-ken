@@ -38,7 +38,7 @@ for (const [id, m] of Object.entries(H.MAPS)) {
     const wp = m.warps[key];
     ok(!!H.MAPS[wp.map], `ワープ ${id}:${key} の行き先 ${wp.map} が存在`);
     const ch = H.MAPS[wp.map].grid[wp.y][wp.x];
-    ok(!'TWRYVBM#CSOEerkhzmqajt'.includes(ch), `ワープ先 ${wp.map}(${wp.x},${wp.y})='${ch}' が歩行可能`);
+    ok(!'TWRYVBM#CSOEerkhzmqajtg'.includes(ch), `ワープ先 ${wp.map}(${wp.x},${wp.y})='${ch}' が歩行可能`);
   }
 }
 for (const [name, art] of Object.entries(H.ART)) {
@@ -51,6 +51,8 @@ const world = H.MAPS.world.grid;
 ok(world.length === 30 && world[0].length === 40, 'ワールドは40x30');
 ok(world[8][20] === 'A', '町アイコンが (20,8)');
 ok(world[9][20] === 'G', '町の出口 (20,9) が草原');
+ok(world[23][20] === 'c', '魔王城が (20,23)');
+ok(world[24][20] === 'G', '魔王城の出口 (20,24) が草原');
 
 // ---- 2. 各状態で描画してもエラーが出ない ----
 console.log('# 描画スモークテスト');
@@ -71,7 +73,7 @@ ok(true, '冒頭メッセージ処理');
 tryDraw('町を 30フレーム描画', () => frames(30));
 
 // ---- 4. 各マップへテレポートして描画 ----
-for (const id of ['weapon', 'inn', 'item', 'tavern', 'world']) {
+for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'world']) {
   const m = H.MAPS[id];
   let x = 4, y = 3;
   if (id === 'world') { x = 20; y = 9; }
@@ -98,15 +100,18 @@ console.log('# 戦闘テスト');
 for (const name of Object.keys(H.ENEMIES)) {
   H.hero.lv = 8;   // 強敵にも勝てるレベルで終局を検証
   H.hero.hp = 999; // 検証用に死なない体力(内部値だけ)
+  H.hero.weapon = 'どうのつるぎ';
   H.startBattle(name, 'grass');
   let guard = 0;
-  while (H.getState() === 'battle' && guard < 3000) {
+  while (H.getState() === 'battle' && guard < 8000) {
     if (guard % 15 === 0) H.press('KeyZ');
     rafCb();
     guard++;
   }
   ok(H.getState() !== 'battle', `${name} 戦が終局 (${guard}フレーム)`);
 }
+ok(H.hero.cleared === true, '魔王討伐でクリアフラグが立つ');
+for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); } // クリアメッセージを閉じる
 
 // ---- 7. 敗北フロー ----
 H.hero.lv = 1; H.hero.hp = 1; H.hero.gold = 100;
