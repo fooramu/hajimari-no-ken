@@ -284,6 +284,12 @@ const TRACKS = {
          ['E4',.5],['E4',.5],['F4',.5],['E4',.5],['B4',1],['A#4',.5],['G4',.5],
          ['C5',.5],['B4',.5],['A#4',.5],['B4',.5],['E5',.5],['D#5',.5],['B4',.5],['G4',.5],
          ['F4',.5],['F#4',.5],['G4',.5],['G#4',.5],['A#4',1],['B4',1]] },
+  tech2: { bpm:168, drums:'kkhskkhs',  // ゾウユウ第二形態: 暴走する機械の狂気
+    chords:[['E4','A#4','B4'],['F4','B4','C5'],['E4','G4','C#5'],['D#4','A4','B4']],
+    mel:[['E6',.5],['E4',.5],['F6',.5],['E4',.5],['E6',.5],['D#6',.5],['B5',.5],['A#5',.5],
+         ['F6',.5],['F4',.5],['F#6',.5],['F4',.5],['F6',.5],['E6',.5],['C6',.5],['B5',.5],
+         ['G6',.5],['E4',.5],['F#6',.5],['E4',.5],['G6',.5],['A6',.5],['G6',.5],['C#6',.5],
+         ['A#5',.5],['B5',.5],['C6',.5],['C#6',.5],['D#6',1],['B5',.5],['A#5',.5]] },
   tech: { bpm:152, drums:'k.hsk.hs',  // ゾウユウ戦: 高音テクノの恐怖
     chords:[['E4','G4','B4'],['D#4','F#4','B4'],['E4','G4','C5'],['F4','G#4','B4']],
     mel:[['E6',.5],['B5',.5],['G5',.5],['B5',.5],['E6',.5],['B5',.5],['G6',.5],['F#6',.5],
@@ -1399,8 +1405,11 @@ const ENEMIES = {
                       breath:true, tame:'dragon' },
   '魔王':         { hp:220, atk:40, def:22, agi:18, exp:350, gold:800, art:'demon',
                       spell:true, breath:true, boss:true },
-  'ゾウユウ':       { hp:900, atk:60, def:40, agi:30, exp:1500, gold:5000, art:'zouyu',
-                      spell:true, breath:true, trueBoss:true },
+  'ゾウユウ':       { hp:550, atk:60, def:40, agi:30, exp:0, gold:0, art:'zouyu',
+                      spell:true, breath:true, trueBoss:true, phase2:'ゾウユウ・真体' },
+  'ゾウユウ・真体': { hp:550, atk:68, def:44, agi:34, exp:1500, gold:5000, art:'zouyu',
+                      spell:true, breath:true, trueBoss:true, big:true, dark:true,
+                      pal:{K:'#0a0006',B:'#ff4060',C:'#ffffff',D:'#0c0c14',W:'#1a1024',L:'#ff8090',S:'#d8b090'} },
 };
 /* 魔王討伐後〜ゾウユウ討伐まで: ゾウユウに書き換えられた「闇の」モンスター */
 function corruptPal(pal) {  // 黒く濁らせて 目を赤く
@@ -2039,7 +2048,24 @@ const dealFoe = (foe, dmg, pages) => {  // 敵にダメージ+撃破ページ追
   foe.hp -= dmg;
   foe.flash = 16;
   battle.fxX = foeOffset(foe);
-  if (foe.hp <= 0) { foe.hp = 0; pages.push(`${foe.name}を 倒した！`); }
+  if (foe.hp <= 0) {
+    if (foe.en.phase2) {  // 倒したと思ったら…第二形態！
+      const oldName = foe.name;
+      foe.name = foe.en.phase2;
+      foe.en = ENEMIES[foe.en.phase2];
+      foe.hp = foe.en.hp;
+      foe.flash = 24;
+      battle.shake = 26;
+      seThunder();
+      setTrack('tech2');
+      pages.push(`${oldName}を 倒した…！？`);
+      pages.push("『……想定内。 第二システム 起動。\n　リミッター 解除……』");
+      pages.push(`ゾウユウは 真の姿\n「${foe.name}」へと 進化した！！`);
+      return;
+    }
+    foe.hp = 0;
+    pages.push(`${foe.name}を 倒した！`);
+  }
 };
 function updateBattle() {
   if (battle.mode === 'intro') {
@@ -3082,7 +3108,7 @@ function drawBattle() {
   const offs = FOE_OFFS[battle.foes.length];
   battle.foes.forEach((f, i) => {
     if (f.hp <= 0) return;
-    const scl = (f.en.boss || f.en.trueBoss || battle.foes.length === 1) ? 10 : 8;
+    const scl = f.en.big ? 12 : (f.en.boss || f.en.trueBoss || battle.foes.length === 1) ? 10 : 8;
     const ex = SX + SW / 2 + offs[i];
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(ex, SY + 295, scl * 9, 16, 0, 0, Math.PI * 2); ctx.fill();
