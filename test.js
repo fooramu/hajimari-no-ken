@@ -195,6 +195,25 @@ for (let i = 0; i < 10; i++) { H.press('KeyZ'); frames(15); }
 ok(H.hero.dragonEvolved === true, 'ドラゴンが伝説の蒼竜に進化');
 tryDraw('蒼竜つきでフィールド描画', () => { H.teleport('town', 9, 11); frames(20); });
 
+// ---- 9.7 ラーメン屋に歩いて入店できる(回帰テスト) ----
+console.log('# ラーメン屋入店テスト');
+for (let i = 0; i < 8; i++) { H.press('KeyZ'); frames(10); }  // 残っているメッセージを閉じ切る
+H.hero.cleared = true;
+H.teleport('world', 20, 24);
+H.setKey('ArrowUp', true);
+frames(50);  // (20,23)へ歩く → ワープ+フェード
+H.setKey('ArrowUp', false);
+frames(40);
+ok(H.getMap() === 'ramen', '魔王討伐後の城はラーメン屋になる (map=' + H.getMap() + ')');
+const rg = H.MAPS.ramen.grid;
+ok(H.player.ty >= 0 && H.player.ty < rg.length && rg[H.player.ty][H.player.tx] === '.',
+   '店内の床の上に配置される (' + H.player.tx + ',' + H.player.ty + ')');
+H.setKey('ArrowUp', true);
+frames(20);
+H.setKey('ArrowUp', false);
+ok(H.player.ty < 5, '店内で移動できる (y=' + H.player.ty + ')');
+frames(10);
+
 // ---- 10. 強くてニューゲーム ----
 console.log('# 強くてニューゲーム');
 H.hero.trueCleared = true; H.hero.cleared = true;
