@@ -17,7 +17,8 @@
   <div id="help">
     <b>矢印 / WASD</b> いどう ｜ <b>Z / Enter / Space</b> けってい・はなす ｜
     <b>X / Esc</b> メニュー・キャンセル ｜ <b>M</b> BGM<br>
-    町の南から ワールドマップへ。モンスターを たおして レベルを あげよう。宿屋で 回復＆セーブ。
+    町の南から ワールドマップへ。モンスターを たおして レベルを あげよう。宿屋で 回復＆セーブ。<br>
+    町の左下 <b>ルイーダの酒場</b>で 戦士と魔法使いを 仲間に できるよ。
   </div>
 </div>
 <script>
@@ -388,10 +389,11 @@ function drawTile(ch, px, py, gx, gy) {
       if (land(nb('r'))) r(14, 0, 2, 16, '#6aa4e8');
       break;
     }
-    case 'R': case 'Y': case 'V': {
+    case 'R': case 'Y': case 'V': case 'r': {
       const c = ch === 'R' ? { a:'#c84432', b:'#a32f1c', hi:'#e8745c', ln:'#8c2614' }
         : ch === 'Y' ? { a:'#3a9048', b:'#2a7034', hi:'#62b86c', ln:'#1f5c28' }
-        : { a:'#3a62c8', b:'#2a4aa8', hi:'#6488e0', ln:'#1f3a88' };
+        : ch === 'V' ? { a:'#3a62c8', b:'#2a4aa8', hi:'#6488e0', ln:'#1f3a88' }
+        : { a:'#c8862e', b:'#a36a1c', hi:'#e8b05c', ln:'#8c5614' };
       r(0, 0, 16, 16, c.a);
       for (let i = 0; i < 4; i++) {
         r(0, i * 4 + 3, 16, 1, c.ln);
@@ -477,6 +479,60 @@ function drawTile(ch, px, py, gx, gy) {
       r(2, 11, 12, 2, '#6a4018');
       break;
     }
+    case 'k': case 'h': case 'z': case 'm': {  // 店の看板つきの壁
+      drawTile('B', px, py, gx, gy);
+      r(7, 0, 2, 2, '#3a2410');
+      r(3, 2, 10, 10, '#8a5c2c'); r(4, 3, 8, 8, '#6a4018');
+      if (ch === 'k') {        // 剣の看板(ぶきや)
+        r(7, 4, 1, 4, '#e8eef8'); r(7, 4, 1, 1, '#ffffff');
+        r(6, 8, 3, 1, '#c8a030'); r(7, 9, 1, 1, '#5a3414');
+      } else if (ch === 'h') { // くすりの看板(どうぐや)
+        r(7, 4, 2, 1, '#d8d8e0');
+        r(6, 5, 4, 4, '#40b050'); r(6, 5, 1, 1, '#80d890');
+      } else if (ch === 'm') { // ジョッキの看板(さかば)
+        r(6, 5, 3, 4, '#e0c088'); r(6, 4, 3, 1, '#ffffff');
+        r(9, 6, 1, 2, '#b08850');
+      } else {                 // ベッドの看板(やどや)
+        r(5, 5, 2, 2, '#f0f0f0');
+        r(5, 7, 6, 2, '#d04040'); r(4, 9, 8, 1, '#8a5c2c');
+      }
+      break;
+    }
+    case 'q': {  // ぶきかけ(武器屋)
+      drawTile('.', px, py, gx, gy);
+      r(1, 1, 14, 12, '#6a4018'); r(2, 2, 12, 10, '#503010');
+      r(3, 3, 1, 6, '#e8eef8'); r(3, 3, 1, 1, '#ffffff');
+      r(2, 9, 3, 1, '#c8a030'); r(3, 10, 1, 2, '#5a3414');
+      r(7, 3, 1, 6, '#aab4c8');
+      r(6, 9, 3, 1, '#c8a030'); r(7, 10, 1, 2, '#5a3414');
+      r(11, 4, 1, 8, '#8a5c2c');
+      r(10, 2, 3, 3, '#c8ccd8'); r(10, 2, 1, 1, '#eef2f8');
+      break;
+    }
+    case 'a': {  // よろいと たてのかざり(武器屋)
+      drawTile('.', px, py, gx, gy);
+      r(7, 1, 2, 13, '#5a3414');
+      r(6, 0, 4, 1, '#8a94a8'); r(5, 1, 6, 3, '#aab4c8');
+      r(4, 5, 8, 5, '#9aa4b8'); r(3, 5, 1, 3, '#7a8498'); r(12, 5, 1, 3, '#7a8498');
+      r(5, 5, 2, 2, '#c8d0e0');
+      r(2, 10, 5, 5, '#7a4a20'); r(3, 11, 3, 3, '#9a6630'); r(4, 12, 1, 1, '#c8a030');
+      break;
+    }
+    case 'j': {  // やくそうのはこ(道具屋)
+      drawTile('.', px, py, gx, gy);
+      r(2, 7, 12, 8, '#8a5c2c'); r(3, 8, 10, 6, '#6a4018');
+      r(2, 7, 12, 1, '#9a6c38');
+      r(4, 4, 2, 4, '#359038'); r(7, 3, 2, 5, '#2a7028'); r(10, 4, 2, 4, '#3c8c34');
+      r(5, 2, 1, 2, '#62b86c'); r(8, 1, 1, 2, '#62b86c'); r(11, 2, 1, 2, '#62b86c');
+      break;
+    }
+    case 't': {  // テーブル(さかば)
+      drawTile('.', px, py, gx, gy);
+      r(3, 10, 2, 4, '#5a3414'); r(11, 10, 2, 4, '#5a3414');
+      r(2, 5, 12, 5, '#8a5c2c'); r(2, 5, 12, 1, '#a87844');
+      r(6, 2, 3, 3, '#e0c088'); r(6, 2, 3, 1, '#ffffff'); r(9, 3, 1, 2, '#b08850');
+      break;
+    }
   }
 }
 /* ================= マップ ================= */
@@ -513,15 +569,15 @@ const MAPS = {
       "TGGGGGGGGGGGGGGGGGGT",
       "TGRRRRRGYYYYGVVVVVGT",
       "TGRRRRRGYYYYGVVVVVGT",
-      "TGBBDBBGBBDBGBBDBBGT",
+      "TGBkDBBGBzDBGBhDBBGT",
       "TGGGPGGGGGPGGGGPGGGT",
       "TGGGPPPPPPPPPPPPGGGT",
       "TGGGGGGGGPPGGGGGGGGT",
       "TGFFGGGGGPPGGGFFGGGT",
       "TGFFGGGGGPPGGWWWWGGT",
-      "TGGGGGGGGPPGGWWWWGGT",
-      "TGGGGGGGGPPGGWWWWGGT",
-      "TGGGGGGGGPPGGGGGGGGT",
+      "TGrrrrrGGPPGGWWWWGGT",
+      "TGrrrrrGGPPGGWWWWGGT",
+      "TGBmDBBGGPPGGGGGGGGT",
       "TGGGGGGGGPPGGGGGGGGT",
       "TTTTTTTTTPPTTTTTTTTT",
     ],
@@ -530,6 +586,7 @@ const MAPS = {
       "4,4":  { map:'weapon', x:4, y:5, dir:'up' },
       "10,4": { map:'inn',    x:4, y:5, dir:'up' },
       "15,4": { map:'item',   x:4, y:5, dir:'up' },
+      "4,12": { map:'tavern', x:5, y:6, dir:'up' },
       "9,14":  { map:'world', x:20, y:9, dir:'down' },
       "10,14": { map:'world', x:20, y:9, dir:'down' },
     },
@@ -538,6 +595,7 @@ const MAPS = {
         pal:{hair:'#604020',skin:'#f0c890',cloth:'#3a9048',legs:'#604020'},
         lines:["ここは はじまりの まち アルファ。",
                "ひだりから ぶきや・やどや・どうぐやだ。\nそなえは だいじだぞ！",
+               "ひだりしたの たてものは ルイーダのさかば。\nなかまを さがすなら あそこだな。",
                "まちの みなみから そとに でられるが…\nまものに きを つけるんだな。"] },
       { tx:13, ty:12, dir:'up', wander:true,
         pal:{hair:'#803818',skin:'#f0c890',cloth:'#d06890',legs:'#803030'},
@@ -553,10 +611,10 @@ const MAPS = {
   weapon: {
     grid: [
       "#########",
-      "#S.....S#",
+      "#qq...aa#",
       "#..CCC..#",
       "#.......#",
-      "#O.....O#",
+      "#O.....a#",
       "#.......#",
       "####D####",
     ],
@@ -596,10 +654,10 @@ const MAPS = {
   item: {
     grid: [
       "#########",
-      "#S.....S#",
+      "#SS...jj#",
       "#..CCC..#",
       "#.......#",
-      "#O.....O#",
+      "#j.....O#",
       "#.......#",
       "####D####",
     ],
@@ -618,6 +676,31 @@ const MAPS = {
         ] },
     ],
   },
+  tavern: {
+    grid: [
+      "###########",
+      "#O.......O#",
+      "#...CCC...#",
+      "#.........#",
+      "#.t.....t.#",
+      "#.........#",
+      "#O.......t#",
+      "#####D#####",
+    ],
+    track: 'town',
+    warps: { "5,7": { map:'town', x:4, y:13, dir:'down' } },
+    npcs: [
+      { tx:5, ty:1, dir:'down',
+        pal:{hair:'#c04848',skin:'#f0c890',cloth:'#d05878',legs:'#883048'},
+        lines:["ようこそ ルイーダの さかばへ！",
+               "たびは みちづれ。 なかまが いれば\nたたかいも ぐっと らくに なるよ。",
+               "こえを かけて なかまに\nさそって あげて ちょうだい。"] },
+      { tx:3, ty:5, dir:'right', recruit:'warrior',
+        pal:{hair:'#7a2818',skin:'#e8b878',cloth:'#b03828',legs:'#583020'} },
+      { tx:7, ty:4, dir:'left', recruit:'mage',
+        pal:{hair:'#5038b8',skin:'#f0d8b8',cloth:'#7a50d0',legs:'#4a3090'} },
+    ],
+  },
   world: {
     grid: genWorld(),
     track: 'field',
@@ -629,14 +712,15 @@ const MAPS = {
 let mapId = 'town';
 let map = MAPS[mapId];
 
-const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e']);
+const SOLID = new Set(['T','W','R','Y','V','B','M','#','C','S','O','E','e','r','k','h','z','m','q','a','j','t']);
 const tileAt = (m, x, y) => {
   const g = MAPS[m].grid;
   if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return 'T';
   return g[y][x];
 };
+const npcGone = n => n.recruit && party.some(m => m.job === n.recruit);
 function entityAt(x, y) {
-  for (const n of map.npcs) if (n.tx === x && n.ty === y) return n;
+  for (const n of map.npcs) if (!npcGone(n) && n.tx === x && n.ty === y) return n;
   return null;
 }
 function isFree(x, y, forNpc) {
@@ -683,6 +767,44 @@ const maxMp = () => LVT[hero.lv].mp;
 const atk = () => LVT[hero.lv].str + (hero.weapon ? WEAPONS[hero.weapon].atk : 0);
 const dfn = () => Math.floor(LVT[hero.lv].agi / 2)
   + (hero.armor ? ARMORS[hero.armor].def : 0) + (hero.shield ? SHIELDS[hero.shield].def : 0);
+
+/* ---- なかま(ルイーダのさかば) ---- */
+const JOBS = {
+  warrior: {
+    name:'ガロン', label:'せんし', atkBonus:4, defBonus:6,
+    pal:{ hair:'#7a2818', skin:'#e8b878', cloth:'#b03828', legs:'#583020' },
+    lvt:[null,
+      {hp:20,mp:0,str:6, agi:3}, {hp:26,mp:0,str:8, agi:4}, {hp:30,mp:0,str:11,agi:5},
+      {hp:38,mp:0,str:14,agi:7}, {hp:44,mp:0,str:18,agi:9}, {hp:48,mp:0,str:22,agi:10},
+      {hp:52,mp:0,str:26,agi:13},{hp:58,mp:0,str:30,agi:16},{hp:64,mp:0,str:35,agi:18},
+      {hp:70,mp:0,str:40,agi:20}],
+    ask:"おれは せんしの ガロン。\nうでっぷしには じしんが あるぜ！\nいっしょに ぼうけん しないか？",
+    no:"きが むいたら また こえを かけてくれ。",
+  },
+  mage: {
+    name:'ミリア', label:'まほうつかい', atkBonus:1, defBonus:2, caster:true,
+    pal:{ hair:'#5038b8', skin:'#f0d8b8', cloth:'#7a50d0', legs:'#4a3090' },
+    lvt:[null,
+      {hp:12,mp:8, str:2, agi:5}, {hp:15,mp:12,str:3, agi:7}, {hp:17,mp:16,str:4, agi:10},
+      {hp:20,mp:22,str:5, agi:13},{hp:24,mp:28,str:7, agi:16},{hp:27,mp:34,str:9, agi:19},
+      {hp:30,mp:40,str:11,agi:23},{hp:34,mp:46,str:13,agi:27},{hp:37,mp:53,str:16,agi:30},
+      {hp:40,mp:60,str:18,agi:34}],
+    ask:"わたしは まほうつかいの ミリア。\nこうげきまほうと かいふくが とくいよ。\nつれていって くれるかしら？",
+    no:"そう… えんが あれば また あいましょ。",
+  },
+};
+const party = [];
+const allAllies = () => [hero, ...party];
+const maxHpOf = a => a === hero ? maxHp() : JOBS[a.job].lvt[hero.lv].hp;
+const maxMpOf = a => a === hero ? maxMp() : JOBS[a.job].lvt[hero.lv].mp;
+const atkOf = a => a === hero ? atk() : JOBS[a.job].lvt[hero.lv].str + JOBS[a.job].atkBonus;
+const dfnOf = a => a === hero ? dfn() : Math.floor(JOBS[a.job].lvt[hero.lv].agi / 2) + JOBS[a.job].defBonus;
+function makeCompanion(job) {
+  const j = JOBS[job];
+  return { job, name:j.name, hp:j.lvt[hero.lv].hp, mp:j.lvt[hero.lv].mp, pal:j.pal,
+           tx:player.tx, ty:player.ty, px:player.tx * T, py:player.ty * T,
+           dir:player.dir, animT:0 };
+}
 const learnedSpells = () => Object.keys(SPELLS).filter(s => hero.lv >= SPELLS[s].lv);
 const addInv = n => { hero.inv[n] = (hero.inv[n] || 0) + 1; };
 const decInv = n => { hero.inv[n]--; if (hero.inv[n] <= 0) delete hero.inv[n]; };
@@ -696,17 +818,17 @@ function equip(n) {
 }
 
 const ENEMIES = {
-  'スライム':       { hp:9,  atk:6,  def:3,  agi:3,  exp:2,  gold:4,  art:'slime' },
-  'あかスライム':   { hp:12, atk:8,  def:4,  agi:5,  exp:4,  gold:7,  art:'slime',
+  'スライム':       { hp:5,  atk:4,  def:0,  agi:2,  exp:2,  gold:5,  art:'slime' },
+  'あかスライム':   { hp:7,  atk:6,  def:1,  agi:3,  exp:3,  gold:7,  art:'slime',
                       pal:{K:'#4a1410',B:'#e85040',L:'#ffb09c',D:'#b03024',W:'#ffffff'} },
-  'おおねずみ':     { hp:10, atk:7,  def:3,  agi:6,  exp:3,  gold:5,  art:'rat' },
-  'キノコこぞう':   { hp:14, atk:9,  def:5,  agi:4,  exp:5,  gold:8,  art:'shroom' },
-  'ぎんのスライム': { hp:5,  atk:7,  def:40, agi:20, exp:20, gold:18, art:'slime', flee:0.4,
+  'おおねずみ':     { hp:6,  atk:5,  def:1,  agi:5,  exp:3,  gold:5,  art:'rat' },
+  'キノコこぞう':   { hp:9,  atk:7,  def:2,  agi:3,  exp:4,  gold:8,  art:'shroom' },
+  'ぎんのスライム': { hp:5,  atk:5,  def:40, agi:20, exp:20, gold:18, art:'slime', flee:0.4,
                       pal:{K:'#2a2a38',B:'#b4bcc8',L:'#eef2f8',D:'#848ca0',W:'#ffffff'} },
-  'おおコウモリ':   { hp:12, atk:9,  def:5,  agi:9,  exp:4,  gold:8,  art:'bat' },
-  'がいこつ':       { hp:18, atk:13, def:9,  agi:8,  exp:8,  gold:16, art:'skel' },
-  'まどうし':       { hp:16, atk:11, def:8,  agi:9,  exp:11, gold:22, art:'mage', spell:true },
-  'ベビードラゴン': { hp:30, atk:18, def:14, agi:12, exp:20, gold:40, art:'drag', breath:true },
+  'おおコウモリ':   { hp:9,  atk:8,  def:3,  agi:8,  exp:4,  gold:8,  art:'bat' },
+  'がいこつ':       { hp:14, atk:11, def:6,  agi:7,  exp:8,  gold:16, art:'skel' },
+  'まどうし':       { hp:13, atk:10, def:5,  agi:8,  exp:11, gold:22, art:'mage', spell:true },
+  'ベビードラゴン': { hp:24, atk:15, def:10, agi:11, exp:20, gold:40, art:'drag', breath:true },
 };
 
 /* ================= プレイヤー・状態 ================= */
@@ -763,6 +885,10 @@ function teleport(m, x, y, dir) {
   player.tx = x; player.ty = y;
   player.px = x * T; player.py = y * T;
   if (dir) player.dir = dir;
+  for (const c of party) {
+    c.tx = x; c.ty = y; c.px = x * T; c.py = y * T;
+    if (dir) c.dir = dir;
+  }
   setTrack(map.track);
 }
 
@@ -772,6 +898,7 @@ function save() {
     localStorage.setItem('hajimari_save', JSON.stringify({
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
+      party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
     }));
   } catch (e) {}
 }
@@ -779,7 +906,17 @@ function loadSave() {
   try {
     const d = JSON.parse(localStorage.getItem('hajimari_save'));
     if (!d) return false;
+    const pd = d.party || [];
+    delete d.party;
     Object.assign(hero, d);
+    party.length = 0;
+    for (const s of pd) {
+      if (!JOBS[s.job]) continue;
+      const m = makeCompanion(s.job);
+      m.hp = Math.min(s.hp, maxHpOf(m));
+      m.mp = Math.min(s.mp, maxMpOf(m));
+      party.push(m);
+    }
     return true;
   } catch (e) { return false; }
 }
@@ -789,11 +926,14 @@ function hasSave() {
 function newGame() {
   hero.lv = 1; hero.exp = 0; hero.gold = 120;
   hero.hp = 16; hero.mp = 0;
-  hero.weapon = hero.armor = hero.shield = null;
+  hero.weapon = 'ひのきのぼう';
+  hero.armor = hero.shield = null;
   hero.inv = {};
+  party.length = 0;
   teleport('town', 9, 11, 'up');
   state = 'field';
-  msg(["アルファの まちに ようこそ！\nＸキーで メニューが ひらけるよ。"]);
+  msg(["アルファの まちに ようこそ！\nＸキーで メニューが ひらけるよ。",
+       "ちちの かたみの ひのきのぼうを\nそうびした！"]);
 }
 function continueGame() {
   loadSave();
@@ -819,9 +959,20 @@ function updateField() {
   const [dx, dy] = DXY[d];
   const nx = player.tx + dx, ny = player.ty + dy;
   if (isFree(nx, ny, false)) {
+    moveParty(player.tx, player.ty);
     player.tx = nx; player.ty = ny;
   } else if (tick - lastBump > 16) {
     seBump(); lastBump = tick;
+  }
+}
+function moveParty(px0, py0) {  // 隊列: なかまが ひとつ前の位置へ ついてくる
+  let tx = px0, ty = py0;
+  for (const c of party) {
+    const ox = c.tx, oy = c.ty;
+    if (ox === tx && oy === ty) break;
+    c.dir = tx > ox ? 'right' : tx < ox ? 'left' : ty > oy ? 'down' : 'up';
+    c.tx = tx; c.ty = ty;
+    tx = ox; ty = oy;
   }
 }
 function onArrive() {
@@ -853,9 +1004,20 @@ function interact() {
     msg([npc.greet]);
   } else if (npc.service === 'inn') {
     innTalk();
+  } else if (npc.recruit) {
+    recruitTalk(npc);
   } else {
     msg(npc.lines.slice());
   }
+}
+function recruitTalk(npc) {
+  const j = JOBS[npc.recruit];
+  msgC([j.ask], ["なかまにする", "やめておく"], i => {
+    if (i !== 0) { msg([j.no]); return; }
+    party.push(makeCompanion(npc.recruit));
+    seLevelUp();
+    msg([`${j.label}の ${j.name}が\nなかまに くわわった！`]);
+  });
 }
 function innTalk() {
   msgC(["やどやに ようこそ！ ひとばん １０Ｇだよ。\nとまっていくかい？"], ["とまる","やめておく"], i => {
@@ -864,6 +1026,7 @@ function innTalk() {
     hero.gold -= 10;
     startFade(() => {
       hero.hp = maxHp(); hero.mp = maxMp();
+      for (const m of party) { m.hp = maxHpOf(m); m.mp = maxMpOf(m); }
       save();
     }, () => {
       seSave();
@@ -877,7 +1040,11 @@ function initEnt(n) {
   n.home = [n.tx, n.ty]; n.wait = 60;
 }
 function updateNpcs() {
+  for (const c of party) {
+    if (c.px !== c.tx * T || c.py !== c.ty * T) stepToward(c);
+  }
   for (const n of map.npcs) {
+    if (npcGone(n)) continue;
     initEnt(n);
     const moving = n.px !== n.tx * T || n.py !== n.ty * T;
     if (moving) { stepToward(n); continue; }
@@ -959,17 +1126,26 @@ function updateMenu() {
   if (pDown()) { menu.sel = (menu.sel + 1) % list.length; seCursor(); }
   if (pressed(CONFIRM)) useEntry(list[menu.sel]);
 }
+function pickAlly(cb) {  // なかまがいれば 回復対象を えらぶ
+  if (party.length === 0) { cb(hero); return; }
+  const allies = allAllies();
+  msgC(["だれに つかう？"], [...allies.map(a => a.name), "やめる"], i => {
+    if (i < allies.length) cb(allies[i]);
+  });
+}
 function useEntry(en) {
   if (en.type === 'spell') {
     const sp = SPELLS[en.name];
     if (!sp.field) { msg(["ここで となえても なにも おこらない。"]); return; }
     if (hero.mp < sp.mp) { msg(["ＭＰが たりない！"]); return; }
-    if (hero.hp >= maxHp()) { msg(["ＨＰは まんたんだ。"]); return; }
-    hero.mp -= sp.mp;
-    const v = Math.min(randInt(10, 17), maxHp() - hero.hp);
-    hero.hp += v;
-    seHeal();
-    msg([`${hero.name}は ヒールを となえた！\nＨＰが ${v} かいふくした！`]);
+    pickAlly(t => {
+      if (t.hp >= maxHpOf(t)) { msg(["ＨＰは まんたんだ。"]); return; }
+      hero.mp -= sp.mp;
+      const v = Math.min(randInt(10, 17), maxHpOf(t) - t.hp);
+      t.hp += v;
+      seHeal();
+      msg([`${hero.name}は ヒールを となえた！\n${t.name}の ＨＰが ${v} かいふくした！`]);
+    });
     return;
   }
   const n = en.name;
@@ -980,12 +1156,14 @@ function useEntry(en) {
   }
   const def = ITEMS[n];
   if (def && def.use === 'heal') {
-    if (hero.hp >= maxHp()) { msg(["ＨＰは まんたんだ。"]); return; }
-    decInv(n);
-    const v = Math.min(randInt(20, 27), maxHp() - hero.hp);
-    hero.hp += v;
-    seHeal();
-    msg([`やくそうを つかった！\nＨＰが ${v} かいふくした！`]);
+    pickAlly(t => {
+      if (t.hp >= maxHpOf(t)) { msg(["ＨＰは まんたんだ。"]); return; }
+      decInv(n);
+      const v = Math.min(randInt(20, 27), maxHpOf(t) - t.hp);
+      t.hp += v;
+      seHeal();
+      msg([`やくそうを つかった！\n${t.name}の ＨＰが ${v} かいふくした！`]);
+    });
     return;
   }
   if (def && def.use === 'wing') {
@@ -1083,6 +1261,11 @@ function heroAttack() {
     }
   });
 }
+function healTargetAuto() {  // いちばん きずついた いきている みかた
+  const list = allAllies().filter(a => a.hp > 0);
+  list.sort((a, b) => a.hp / maxHpOf(a) - b.hp / maxHpOf(b));
+  return list[0];
+}
 function castSpell(name) {
   const sp = SPELLS[name];
   if (hero.mp < sp.mp) { battle.mode = 'wait'; msg(["ＭＰが たりない！"], () => battle.mode = 'cmd'); return; }
@@ -1090,9 +1273,10 @@ function castSpell(name) {
   battle.mode = 'wait';
   if (name === 'ヒール') {
     seHeal();
-    const v = Math.min(randInt(10, 17), maxHp() - hero.hp);
-    hero.hp += v;
-    msg([`${hero.name}は ヒールを となえた！`, `ＨＰが ${v} かいふくした！`], () => enemyAct());
+    const t = healTargetAuto();
+    const v = Math.min(randInt(10, 17), maxHpOf(t) - t.hp);
+    t.hp += v;
+    msg([`${hero.name}は ヒールを となえた！`, `${t.name}の ＨＰが ${v} かいふくした！`], () => companionsAct(0));
   } else {
     seSpark();
     battle.fx = 14;
@@ -1106,13 +1290,52 @@ function useBattleItem(name) {
   battle.mode = 'wait';
   decInv(name);
   seHeal();
-  const v = Math.min(randInt(20, 27), maxHp() - hero.hp);
-  hero.hp += v;
-  msg([`${hero.name}は やくそうを つかった！`, `ＨＰが ${v} かいふくした！`], () => enemyAct());
+  const t = healTargetAuto();
+  const v = Math.min(randInt(20, 27), maxHpOf(t) - t.hp);
+  t.hp += v;
+  msg([`${hero.name}は やくそうを つかった！`, `${t.name}の ＨＰが ${v} かいふくした！`], () => companionsAct(0));
 }
 function afterHero() {
   if (battle.ehp <= 0) victory();
-  else enemyAct();
+  else companionsAct(0);
+}
+function companionsAct(i) {  // なかまは じどうで たたかう
+  if (battle.ehp <= 0) { victory(); return; }
+  if (i >= party.length) { enemyAct(); return; }
+  const m = party[i];
+  if (m.hp <= 0) { companionsAct(i + 1); return; }
+  const next = () => { if (battle.ehp <= 0) victory(); else companionsAct(i + 1); };
+  const j = JOBS[m.job];
+  if (j.caster && m.mp >= SPELLS['ヒール'].mp) {
+    const hurt = allAllies().filter(a => a.hp > 0 && a.hp <= maxHpOf(a) * 0.45)
+      .sort((a, b) => a.hp / maxHpOf(a) - b.hp / maxHpOf(b))[0];
+    if (hurt) {
+      m.mp -= SPELLS['ヒール'].mp;
+      seHeal();
+      const v = Math.min(randInt(10, 17), maxHpOf(hurt) - hurt.hp);
+      hurt.hp += v;
+      msg([`${m.name}は ヒールを となえた！`, `${hurt.name}の ＨＰが ${v} かいふくした！`], next);
+      return;
+    }
+  }
+  if (j.caster && m.mp >= SPELLS['スパーク'].mp && Math.random() < 0.75) {
+    m.mp -= SPELLS['スパーク'].mp;
+    seSpark(); battle.fx = 14;
+    const dmg = randInt(8, 16);
+    battle.ehp -= dmg; battle.enFlash = 16;
+    msg([`${m.name}は スパークを となえた！`, `${battle.name}に ${dmg}の ダメージ！`], next);
+    return;
+  }
+  msg([`${m.name}の こうげき！`], () => {
+    const base = atkOf(m) - Math.floor(battle.en.def / 2);
+    const dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
+    if (dmg <= 0) {
+      msg(["ミス！ ダメージを あたえられない！"], next);
+    } else {
+      battle.ehp -= dmg; battle.enFlash = 16; seHit();
+      msg([`${battle.name}に ${dmg}の ダメージ！`], next);
+    }
+  });
 }
 function enemyAct() {
   battle.mode = 'wait';
@@ -1121,39 +1344,46 @@ function enemyAct() {
     msg([`${battle.name}は にげだした！`], () => endBattle());
     return;
   }
+  const targets = allAllies().filter(a => a.hp > 0);
+  const t = targets[Math.floor(Math.random() * targets.length)];
   let act = 'atk';
   if (en.spell && Math.random() < 0.35) act = 'spark';
   if (en.breath && Math.random() < 0.35) act = 'fire';
   if (act === 'spark') {
     seSpark(); battle.fx = 14;
-    const dmg = randInt(6, 12);
-    hero.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}は スパークを となえた！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+    const dmg = randInt(4, 9);
+    t.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}は スパークを となえた！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
     return;
   }
   if (act === 'fire') {
     seSpark(); battle.fx = 14;
-    const dmg = randInt(8, 14);
-    hero.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}は ほのおを はいた！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+    const dmg = randInt(6, 11);
+    t.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}は ほのおを はいた！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
     return;
   }
-  const base = en.atk - Math.floor(dfn() / 2);
+  const base = en.atk - Math.floor(dfnOf(t) / 2);
   const dmg = Math.max(0, randInt(Math.floor(base / 4), Math.floor(base / 2)));
   if (dmg <= 0) {
-    msg([`${battle.name}の こうげき！`, `ミス！ ${hero.name}は ダメージを うけない！`], afterEnemy);
+    msg([`${battle.name}の こうげき！`, `ミス！ ${t.name}は ダメージを うけない！`], () => afterEnemy(t));
   } else {
-    hero.hp -= dmg; battle.shake = 14; seDamage();
-    msg([`${battle.name}の こうげき！`, `${hero.name}は ${dmg}の ダメージを うけた！`], afterEnemy);
+    t.hp -= dmg; battle.shake = 14; seDamage();
+    msg([`${battle.name}の こうげき！`, `${t.name}は ${dmg}の ダメージを うけた！`], () => afterEnemy(t));
   }
 }
-function afterEnemy() {
-  if (hero.hp <= 0) { hero.hp = 0; died(); }
-  else battle.mode = 'cmd';
+function afterEnemy(t) {
+  if (hero.hp <= 0) { hero.hp = 0; died(); return; }
+  if (t && t !== hero && t.hp <= 0) {
+    t.hp = 0;
+    msg([`${t.name}は ちからつきた！`], () => { battle.mode = 'cmd'; });
+    return;
+  }
+  battle.mode = 'cmd';
 }
 function tryRun() {
   battle.mode = 'wait';
-  msg([`${hero.name}は にげだした！`], () => {
+  msg([`${hero.name}${party.length ? 'たち' : ''}は にげだした！`], () => {
     const p = clamp(0.55 + (LVT[hero.lv].agi - battle.en.agi) * 0.03, 0.25, 0.95);
     if (Math.random() < p) endBattle();
     else msg(["しかし まわりこまれて しまった！"], () => enemyAct());
@@ -1174,9 +1404,15 @@ function levelChain(done) {
     hero.lv++;
     hero.hp += n.hp - o.hp;
     hero.mp += n.mp - o.mp;
+    for (const m of party) {
+      const jo = JOBS[m.job].lvt[hero.lv - 1], jn = JOBS[m.job].lvt[hero.lv];
+      if (m.hp > 0) m.hp += jn.hp - jo.hp;
+      m.mp += jn.mp - jo.mp;
+    }
     seLevelUp();
     const pages = [`${hero.name}は レベル${hero.lv}に あがった！`,
       `ちから +${n.str - o.str}　すばやさ +${n.agi - o.agi}\nさいだいＨＰ +${n.hp - o.hp}　さいだいＭＰ +${n.mp - o.mp}`];
+    if (party.length) pages.push('なかまたちも ちからを つけた！');
     for (const s of Object.keys(SPELLS))
       if (SPELLS[s].lv === hero.lv) pages.push(`じゅもん「${s}」を おぼえた！`);
     msg(pages, () => levelChain(done));
@@ -1191,6 +1427,7 @@ function died() {
   msg(["めのまえが まっくらに なった…"], () => {
     hero.gold = Math.floor(hero.gold / 2);
     hero.hp = maxHp(); hero.mp = maxMp();
+    for (const m of party) { m.hp = maxHpOf(m); m.mp = maxMpOf(m); }
     battle = null;
     state = 'field';
     startFade(() => { teleport('town', 10, 7, 'down'); },
@@ -1376,6 +1613,17 @@ function drawMenu() {
   text('Ｅ ' + (hero.weapon || 'なし'), x + 50, y + 392, 20);
   text('Ｅ ' + (hero.armor || 'なし') + '／' + (hero.shield || 'なし'), x + 50, y + 420, 20);
 
+  if (party.length) {
+    const y3 = y + 484, h3 = party.length * 60 + 44;
+    drawWindow(x, y3, w, h3);
+    text('なかま', x + 30, y3 + 18, 22, '#ffd860');
+    party.forEach((m, i) => {
+      const yy = y3 + 50 + i * 60;
+      text(`${m.name}（${JOBS[m.job].label}）`, x + 36, yy, 20, m.hp > 0 ? '#fff' : '#ff8060');
+      text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 28, 18, '#ccd');
+    });
+  }
+
   const list = menuEntries();
   const x2 = 440, w2 = 480, h2 = Math.max(1, list.length) * 42 + 100;
   drawWindow(x2, y, w2, h2);
@@ -1431,12 +1679,17 @@ function drawBattle() {
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.roundRect(SX, SY, SW, SH, 8); ctx.stroke();
 
-  drawWindow(28, 28, 200, 168);
-  text(hero.name, 56, 48, 22, '#ffd860');
-  text('ＬＶ', 56, 84, 20);  text(String(hero.lv), 198, 84, 20, '#fff', 'right');
-  text('ＨＰ', 56, 118, 20);
-  text(hero.hp + '/' + maxHp(), 198, 118, 20, hero.hp <= maxHp() / 4 ? '#ff8060' : '#fff', 'right');
-  text('ＭＰ', 56, 152, 20); text(hero.mp + '/' + maxMp(), 198, 152, 20, '#fff', 'right');
+  allAllies().forEach((a, i) => {
+    const wy = 28 + i * 132;
+    drawWindow(28, wy, 204, 124);
+    const dead = a.hp <= 0;
+    text(a.name, 52, wy + 16, 20, dead ? '#888' : '#ffd860');
+    text('ＨＰ', 52, wy + 52, 18);
+    text(a.hp + '/' + maxHpOf(a), 204, wy + 52, 18,
+         dead || a.hp <= maxHpOf(a) / 4 ? '#ff8060' : '#fff', 'right');
+    text('ＭＰ', 52, wy + 86, 18);
+    text(a.mp + '/' + maxMpOf(a), 204, wy + 86, 18, '#fff', 'right');
+  });
 
   if (battle.mode === 'cmd' || battle.mode === 'spell' || battle.mode === 'item') {
     drawWindow(28, 420, 230, 4 * 44 + 40);
@@ -1507,7 +1760,7 @@ function draw() {
     for (let y = y0; y <= y1; y++)
       for (let x = x0; x <= x1; x++)
         drawTile(g[y][x], x * T - cam.x, y * T - cam.y, x, y);
-    const ents = [...map.npcs, player];
+    const ents = [...map.npcs.filter(n => !npcGone(n)), ...party, player];
     for (const e of ents) initEnt(e);
     ents.sort((a, b) => a.py - b.py);
     for (const e of ents) drawChara(e, cam);
@@ -1536,7 +1789,7 @@ loop();
 
 if (typeof globalThis.__TEST_HOOK === 'function') {
   globalThis.__TEST_HOOK({
-    MAPS, ART, ENEMIES, hero,
+    MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion,
     getState: () => state,
     press: c => { justPressed.add(c); },
     startBattle, teleport, newGame,

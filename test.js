@@ -38,7 +38,7 @@ for (const [id, m] of Object.entries(H.MAPS)) {
     const wp = m.warps[key];
     ok(!!H.MAPS[wp.map], `ワープ ${id}:${key} の行き先 ${wp.map} が存在`);
     const ch = H.MAPS[wp.map].grid[wp.y][wp.x];
-    ok(!'TWRYVBM#CSOEe'.includes(ch), `ワープ先 ${wp.map}(${wp.x},${wp.y})='${ch}' が歩行可能`);
+    ok(!'TWRYVBM#CSOEerkhzmqajt'.includes(ch), `ワープ先 ${wp.map}(${wp.x},${wp.y})='${ch}' が歩行可能`);
   }
 }
 for (const [name, art] of Object.entries(H.ART)) {
@@ -71,7 +71,7 @@ ok(true, '冒頭メッセージ処理');
 tryDraw('町を 30フレーム描画', () => frames(30));
 
 // ---- 4. 各マップへテレポートして描画 ----
-for (const id of ['weapon', 'inn', 'item', 'world']) {
+for (const id of ['weapon', 'inn', 'item', 'tavern', 'world']) {
   const m = H.MAPS[id];
   let x = 4, y = 3;
   if (id === 'world') { x = 20; y = 9; }
@@ -121,6 +121,25 @@ frames(60); // 死亡後のフェード+メッセージ
 H.press('KeyZ'); frames(10);
 ok(H.getState() === 'field', '敗北後にフィールドへ復帰');
 ok(H.hero.hp > 0, '敗北後にHP回復 (hp=' + H.hero.hp + ')');
+
+// ---- 8. なかま(ルイーダの酒場) ----
+console.log('# なかまテスト');
+H.hero.lv = 5;
+H.party.push(H.makeCompanion('warrior'), H.makeCompanion('mage'));
+ok(H.party.length === 2, '戦士と魔法使いが仲間に');
+ok(H.party[0].hp === H.JOBS.warrior.lvt[5].hp, '戦士のHPがレベル表どおり');
+tryDraw('仲間つきでフィールド描画', () => { H.teleport('town', 9, 11); frames(20); });
+tryDraw('仲間つきでメニュー描画', () => { H.press('KeyX'); frames(10); H.press('KeyX'); frames(5); });
+H.hero.hp = 999;
+H.startBattle('スライム', 'grass');
+guard = 0;
+while (H.getState() === 'battle' && guard < 4000) {
+  if (guard % 15 === 0) H.press('KeyZ');
+  rafCb();
+  guard++;
+}
+ok(H.getState() !== 'battle', `パーティ戦闘が終局 (${guard}フレーム)`);
+ok(H.party.every(m => m.hp > 0), '仲間が生存している');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} 件失敗`);
 process.exit(failures === 0 ? 0 : 1);
