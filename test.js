@@ -92,7 +92,7 @@ ok(H.getState() === 'field', 'メニューが閉じる');
 
 // ---- 5.5 武器装備時の見た目描画 ----
 console.log('# 武器装備の描画');
-for (const w of ['ひのきのぼう', 'こんぼう', 'どうのつるぎ', null]) {
+for (const w of ['ひのきの棒', 'こん棒', '銅の剣', null]) {
   H.hero.weapon = w;
   tryDraw(`装備 ${w || 'なし'} で描画`, () => frames(10));
 }
@@ -102,7 +102,7 @@ console.log('# 戦闘テスト');
 for (const name of Object.keys(H.ENEMIES)) {
   H.hero.lv = 8;   // 強敵にも勝てるレベルで終局を検証
   H.hero.hp = 999; // 検証用に死なない体力(内部値だけ)
-  H.hero.weapon = 'どうのつるぎ';
+  H.hero.weapon = '銅の剣';
   H.startBattle(name, 'grass');
   let guard = 0;
   while (H.getState() === 'battle' && guard < 8000) {
@@ -129,8 +129,8 @@ H.press('KeyZ'); frames(10);
 ok(H.getState() === 'field', '敗北後にフィールドへ復帰');
 ok(H.hero.hp > 0, '敗北後にHP回復 (hp=' + H.hero.hp + ')');
 
-// ---- 8. なかま(ルイーダの酒場) ----
-console.log('# なかまテスト');
+// ---- 8. 仲間(ルイーダの酒場) ----
+console.log('# 仲間テスト');
 H.hero.lv = 5;
 H.party.push(H.makeCompanion('warrior'), H.makeCompanion('mage'));
 ok(H.party.length === 2, '戦士と魔法使いが仲間に');
@@ -156,14 +156,14 @@ H.teleport('temple', 4, 3);
 H.player.dir = 'up';
 H.press('KeyZ'); frames(5);          // 神さまに話しかける
 for (let i = 0; i < 10; i++) { H.press('KeyZ'); frames(12); }
-ok(H.hero.blessed === true, '神のちからを さずかった (blessed)');
-ok(H.hero.weapon === 'しんのつるぎ', '勇者にしんのつるぎ (weapon=' + H.hero.weapon + ')');
+ok(H.hero.blessed === true, '神の力を 授かった (blessed)');
+ok(H.hero.weapon === '神の剣', '勇者に神の剣 (weapon=' + H.hero.weapon + ')');
 tryDraw('覚醒後の見た目で描画', () => { H.teleport('town', 9, 11); frames(20); });
 tryDraw('覚醒後のメニュー描画', () => { H.press('KeyX'); frames(10); H.press('KeyX'); frames(5); });
 
-// ---- 9. セーブゾーン(まほうじん) ----
+// ---- 9. セーブゾーン(魔法陣) ----
 console.log('# セーブゾーンテスト');
-ok(H.MAPS.town.grid[13][11] === 's', '町の入り口ちかくに まほうじん (11,13)');
+ok(H.MAPS.town.grid[13][11] === 's', '町の入り口ちかくに 魔法陣 (11,13)');
 H.teleport('town', 11, 13);
 H.hero.gold = 777;
 H.save();
@@ -173,8 +173,8 @@ H.teleport('world', 25, 20);
 H.hero.gold = 0;
 H.continueGame();
 frames(5); H.press('KeyZ'); frames(10);
-ok(H.player.tx === 11 && H.player.ty === 13, 'つづきからで記録地点に復帰');
-ok(H.hero.gold === 777, 'つづきからでステータス復元 (gold=' + H.hero.gold + ')');
+ok(H.player.tx === 11 && H.player.ty === 13, '続きからで記録地点に復帰');
+ok(H.hero.gold === 777, '続きからでステータス復元 (gold=' + H.hero.gold + ')');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} 件失敗`);
 process.exit(failures === 0 ? 0 : 1);
