@@ -120,6 +120,8 @@ for (const name of Object.keys(H.ENEMIES)) {
 ok(H.hero.cleared === true, '魔王討伐でクリアフラグが立つ');
 ok(H.hero.trueCleared === true, 'ゾウユウ討伐で真クリアフラグが立つ');
 ok(H.party.some(m => m.job === 'dragon'), 'ドラゴン戦の勝利でドラゴンが仲間に');
+ok(H.hero.ach.maou === true && H.hero.ach.zouyu === true && H.hero.ach.dragon === true,
+   'やりこみ度: 魔王・ゾウユウ・ドラゴンの実績を獲得');
 for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); } // クリアメッセージを閉じる
 tryDraw('クリア後の町(パレード+紙吹雪)描画', () => { H.teleport('town', 9, 11); frames(30); });
 
@@ -192,6 +194,7 @@ H.press('KeyZ'); frames(5);
 for (let i = 0; i < 12; i++) { H.press('KeyZ'); frames(15); }
 ok(H.hero.blessed2 === true, '神殿で第二覚醒 (blessed2)');
 ok(H.hero.weapon === '終焉の剣', '勇者に終焉の剣 (weapon=' + H.hero.weapon + ')');
+ok(H.hero.ach.bless1 === true && H.hero.ach.bless2 === true, 'やりこみ度: 第一・第二覚醒の実績を獲得');
 tryDraw('第二覚醒の見た目で描画', () => { H.teleport('town', 9, 11); frames(20); });
 
 // ---- 9. セーブゾーン(魔法陣) ----
