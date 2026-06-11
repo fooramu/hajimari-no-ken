@@ -207,6 +207,7 @@ const seBump    = () => sfx(90, .06, 'sawtooth', .06);
 const seWarp    = () => { sfx(520, .1); setTimeout(() => sfx(780, .1), 80); };
 const seBuy     = () => { sfx(660, .09); setTimeout(() => sfx(990, .12), 90); };
 const seHit     = () => sweep(300, 70, .15);
+const seSlash   = () => { sweep(1400, 180, .1, 'sawtooth', .06); setTimeout(() => sweep(400, 60, .14, 'sawtooth', .07), 40); };
 const seDamage  = () => sweep(160, 40, .22);
 const seHeal    = () => { sfx(700, .08, 'triangle', .1); setTimeout(() => sfx(1050, .14, 'triangle', .1), 90); };
 const seSpark   = () => sweep(1400, 200, .3, 'sawtooth', .07);
@@ -1319,7 +1320,9 @@ function updateNpcs() {
 }
 
 /* ---- エンカウント ---- */
+let noEncUntil = 0;  // 戦闘直後の猶予(最低3秒 ≒ 180フレーム)
 function checkEncounter() {
+  if (tick < noEncUntil) return;
   const ch = tileAt('world', player.tx, player.ty);
   const d = Math.abs(player.tx - 20) + Math.abs(player.ty - 8);
   if (d < 3) return;
@@ -1441,7 +1444,7 @@ function useEntry(en) {
 function startBattle(name, terrain) {
   const e = ENEMIES[name];
   battle = { name, en:e, ehp:e.hp, terrain, mode:'intro', sel:0, ssel:0, isel:0,
-             intro:22, shake:0, enFlash:0, fx:0 };
+             intro:22, shake:0, enFlash:0, fx:0, slash:0, slashX:false };
   state = 'battle';
   seEncount();
   setTrack('battle');
@@ -1451,6 +1454,7 @@ function updateBattle() {
   if (battle.shake > 0) battle.shake--;
   if (battle.enFlash > 0) battle.enFlash--;
   if (battle.fx > 0) battle.fx--;
+  if (battle.slash > 0) battle.slash--;
   if (battle.mode === 'intro') {
     if (--battle.intro <= 0) {
       battle.mode = 'wait';
@@ -1516,7 +1520,9 @@ function heroAttack() {
     } else {
       battle.ehp -= dmg;
       battle.enFlash = 16;
-      seHit();
+      battle.slash = crit ? 24 : 18;
+      battle.slashX = crit;
+      seSlash();
       const pages = crit ? ["かいしんの いちげき！！", `${battle.name}に ${dmg}の ダメージ！`]
                          : [`${battle.name}に ${dmg}の ダメージ！`];
       msg(pages, afterHero);
@@ -1594,7 +1600,9 @@ function companionsAct(i) {  // なかまは じどうで たたかう
     if (dmg <= 0) {
       msg(["ミス！ ダメージを あたえられない！"], next);
     } else {
-      battle.ehp -= dmg; battle.enFlash = 16; seHit();
+      battle.ehp -= dmg; battle.enFlash = 16;
+      battle.slash = 18; battle.slashX = false;
+      seSlash();
       msg([`${battle.name}に ${dmg}の ダメージ！`], next);
     }
   });
@@ -1665,6 +1673,7 @@ function bossVictory() {
   hero.cleared = true;
   battle = null;
   state = 'field';
+  noEncUntil = tick + 180;
   setTrack(map.track);
   seVictory();
   msg(["まおうは ほろび せかいに\nひかりが もどった！",
@@ -1694,6 +1703,7 @@ function levelChain(done) {
 function endBattle() {
   battle = null;
   state = 'field';
+  noEncUntil = tick + 180;
   setTrack(map.track);
 }
 function died() {
@@ -1703,6 +1713,7 @@ function died() {
     for (const m of party) { m.hp = maxHpOf(m); m.mp = maxMpOf(m); }
     battle = null;
     state = 'field';
+    noEncUntil = tick + 180;
     startFade(() => { teleport('town', 10, 7, 'down'); },
       () => msg(["「しんでしまうとは なさけない！\n　だが チャンスを やろう」\nどこからか こえが きこえた…"]));
   });
@@ -2075,6 +2086,39 @@ function drawBattle() {
   ctx.beginPath(); ctx.ellipse(SX + SW / 2, SY + 295, 95, 18, 0, 0, Math.PI * 2); ctx.fill();
   const visible = !(battle.enFlash > 0 && tick % 4 < 2) && battle.ehp > 0;
   if (visible) drawArt(ART[battle.en.art], SX + SW / 2 - 80, SY + 138, 10, battle.en.pal);
+  if (battle.slash > 0) {  // 斬撃エフェクト(ズシャッ)
+    const dur = battle.slashX ? 24 : 18;
+    const p = 1 - battle.slash / dur;
+    const cx = SX + SW / 2, cy = SY + 212;
+    const drawSlash = sign => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(sign * Math.PI / 4);
+      const L = 270;
+      for (let i = 0; i < 3; i++) {
+        const off = (i - 1) * 28;
+        const adv = Math.min(1, p * 1.6 + i * 0.06);
+        const head = -L / 2 + L * adv;
+        const tail = Math.max(-L / 2, head - 80 - 70 * (1 - p));
+        const a = Math.max(0, 0.95 - p * 0.85 - i * 0.15);
+        if (head <= tail || a <= 0) continue;
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillRect(tail, off - 3, head - tail, 6);
+        ctx.fillStyle = `rgba(255,224,120,${a * 0.7})`;
+        ctx.fillRect(tail, off + 3, head - tail, 2);
+      }
+      ctx.restore();
+    };
+    drawSlash(1);
+    if (battle.slashX) drawSlash(-1);
+    if (p < 0.6) {  // 火花
+      ctx.fillStyle = `rgba(255,240,160,${0.9 - p})`;
+      for (let i = 0; i < 6; i++) {
+        const ang = i * 1.05 + 0.4, rr = 18 + p * 80;
+        ctx.fillRect(cx + Math.cos(ang) * rr - 3, cy - 36 + Math.sin(ang) * rr * 0.7 - 3, 6, 6);
+      }
+    }
+  }
   ctx.restore();
 
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
@@ -2192,6 +2236,7 @@ if (typeof globalThis.__TEST_HOOK === 'function') {
   globalThis.__TEST_HOOK({
     MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion, player, save, loadSave, continueGame,
     getState: () => state,
+    getBattle: () => battle,
     press: c => { justPressed.add(c); },
     startBattle, teleport, newGame,
     setState: s => { state = s; },
