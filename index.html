@@ -153,11 +153,12 @@ function toggleBgm() {
   else { clearTimeout(bgmTimer); bgmTimer = null; }
 }
 /* ================= ドット絵 ================= */
-function drawArt(art, x, y, s) {
+function drawArt(art, x, y, s, pal) {
+  const colors = pal || art.pal;
   for (let r = 0; r < art.rows.length; r++) {
     const row = art.rows[r];
     for (let c = 0; c < row.length; c++) {
-      const col = art.pal[row[c]];
+      const col = colors[row[c]];
       if (!col) continue;
       ctx.fillStyle = col;
       ctx.fillRect(x + c * s, y + r * s, s, s);
@@ -250,6 +251,40 @@ const ART = {
     ".KGGGLLLLLLGGGK.",
     "..KGGK....KGGK..",
     "..KKKK....KKKK.."]},
+  rat: { pal:{K:'#2a1c14',B:'#9a7a58',L:'#d8c0a0',P:'#e89098',W:'#ffffff',E:'#181010',N:'#d86878'}, rows:[
+    "................",
+    ".KK..........KK.",
+    "KBPK........KPBK",
+    "KBPBK......KBPBK",
+    ".KBBKKKKKKKKBBK.",
+    ".KBBBBBBBBBBBBK.",
+    ".KBKEBBBBBBEKBK.",
+    ".KBBBBKNNKBBBBK.",
+    ".KBBBKWWWWKBBBK.",
+    "..KBBBBBBBBBBK..",
+    ".KBBBBBBBBBBBBK.",
+    ".KBBLLLLLLLLBBK.",
+    "..KBBLLLLLLBBK..",
+    "...KKBBBBBBKK...",
+    "....KKKK...KKP..",
+    ".............PP."]},
+  shroom: { pal:{K:'#2a1830',H:'#8a48b8',W:'#e8d8f0',S:'#e8d0a8',E:'#302018'}, rows:[
+    "................",
+    "....KKKKKKKK....",
+    "..KKHHHHHHHHKK..",
+    ".KHHWWHHHHWWHHK.",
+    ".KHHHHHWWHHHHHK.",
+    "KHHHHHHHHHHHHHHK",
+    "KHHWWHHHHHHWWHHK",
+    ".KKKKKKKKKKKKKK.",
+    "..KSSSSSSSSSSK..",
+    "..KSESSSSSSESK..",
+    "..KSSSKKKKSSSK..",
+    "..KSSSSSSSSSSK..",
+    "...KKSSSSSSKK...",
+    "....KSSSSSSK....",
+    "...KKSSSSSSKK...",
+    "...KKKKKKKKKK..."]},
   sword: { pal:{K:'#222',W:'#e8eef8',L:'#aab4c8',G:'#c8a030',B:'#7a4a20'}, rows:[
     ".......KK.......",
     "......KWLK......",
@@ -662,6 +697,12 @@ function equip(n) {
 
 const ENEMIES = {
   'スライム':       { hp:9,  atk:6,  def:3,  agi:3,  exp:2,  gold:4,  art:'slime' },
+  'あかスライム':   { hp:12, atk:8,  def:4,  agi:5,  exp:4,  gold:7,  art:'slime',
+                      pal:{K:'#4a1410',B:'#e85040',L:'#ffb09c',D:'#b03024',W:'#ffffff'} },
+  'おおねずみ':     { hp:10, atk:7,  def:3,  agi:6,  exp:3,  gold:5,  art:'rat' },
+  'キノコこぞう':   { hp:14, atk:9,  def:5,  agi:4,  exp:5,  gold:8,  art:'shroom' },
+  'ぎんのスライム': { hp:5,  atk:7,  def:40, agi:20, exp:20, gold:18, art:'slime', flee:0.4,
+                      pal:{K:'#2a2a38',B:'#b4bcc8',L:'#eef2f8',D:'#848ca0',W:'#ffffff'} },
   'おおコウモリ':   { hp:12, atk:9,  def:5,  agi:9,  exp:4,  gold:8,  art:'bat' },
   'がいこつ':       { hp:18, atk:13, def:9,  agi:8,  exp:8,  gold:16, art:'skel' },
   'まどうし':       { hp:16, atk:11, def:8,  agi:9,  exp:11, gold:22, art:'mage', spell:true },
@@ -861,9 +902,12 @@ function checkEncounter() {
   const rate = ch === 'F' ? 1 / 7 : 1 / 14;
   if (Math.random() >= rate) return;
   const forest = ch === 'F';
+  if (Math.random() < 0.05) { startBattle('ぎんのスライム', forest ? 'forest' : 'grass'); return; }
   let pool;
-  if (d <= 7)       pool = forest ? ['おおコウモリ','スライム'] : ['スライム','スライム','おおコウモリ'];
-  else if (d <= 14) pool = forest ? ['がいこつ','まどうし','おおコウモリ'] : ['おおコウモリ','がいこつ','スライム'];
+  if (d <= 7)       pool = forest ? ['おおねずみ','キノコこぞう','おおコウモリ','あかスライム']
+                                  : ['スライム','スライム','あかスライム','おおねずみ','キノコこぞう'];
+  else if (d <= 14) pool = forest ? ['がいこつ','まどうし','キノコこぞう','おおコウモリ']
+                                  : ['おおコウモリ','あかスライム','がいこつ','おおねずみ'];
   else              pool = forest ? ['まどうし','ベビードラゴン','がいこつ'] : ['がいこつ','まどうし','ベビードラゴン'];
   startBattle(pool[Math.floor(Math.random() * pool.length)], forest ? 'forest' : 'grass');
 }
@@ -1073,6 +1117,10 @@ function afterHero() {
 function enemyAct() {
   battle.mode = 'wait';
   const en = battle.en;
+  if (en.flee && Math.random() < en.flee) {
+    msg([`${battle.name}は にげだした！`], () => endBattle());
+    return;
+  }
   let act = 'atk';
   if (en.spell && Math.random() < 0.35) act = 'spark';
   if (en.breath && Math.random() < 0.35) act = 'fire';
@@ -1221,6 +1269,42 @@ function drawChara(e, cam) {
   if (frame === 0) { r(4, 13, 3, 2, p.legs); r(9, 13, 3, 2, p.legs); }
   else if (e.dir === 'left' || e.dir === 'right') { r(5, 13, 3, 2, p.legs); r(8, 14, 3, 1, p.legs); }
   else { r(4, 13, 3, 2, p.legs); r(9, 14, 3, 1, p.legs); }
+  if (e === player && hero.weapon) drawHeldWeapon(r, e.dir);
+}
+function drawHeldWeapon(r, dir) {
+  const n = hero.weapon;
+  const vert = x => {  // 縦持ち(きほん きを つけ の よこ)
+    if (n === 'どうのつるぎ') {
+      r(x, 1, 1, 1, '#f8e8b8');
+      r(x, 2, 1, 7, '#e0a850'); r(x, 3, 1, 5, '#f0c878');
+      r(x - 1, 9, 3, 1, '#c8a030');
+      r(x, 10, 1, 3, '#5a3414');
+    } else if (n === 'こんぼう') {
+      r(x - 1, 2, 2, 5, '#7a4a20'); r(x - 1, 2, 2, 1, '#9a6630');
+      r(x, 7, 1, 5, '#8a5c2c');
+    } else {
+      r(x, 2, 1, 10, '#8a5c2c'); r(x, 2, 1, 2, '#a87844');
+    }
+  };
+  const horiz = (x0, right) => {  // よこ持ち(すすむ ほうこうへ)
+    if (n === 'どうのつるぎ') {
+      r(right ? x0 : x0 + 5, 10, 2, 1, '#5a3414');
+      r(right ? x0 + 2 : x0 + 4, 9, 1, 3, '#c8a030');
+      r(right ? x0 + 3 : x0, 10, 4, 1, '#e0a850');
+      r(right ? x0 + 6 : x0, 10, 1, 1, '#f8e8b8');
+    } else if (n === 'こんぼう') {
+      r(right ? x0 : x0 + 4, 10, 3, 1, '#8a5c2c');
+      r(right ? x0 + 3 : x0, 9, 4, 3, '#7a4a20');
+      r(right ? x0 + 3 : x0, 9, 4, 1, '#9a6630');
+    } else {
+      r(x0, 10, 7, 1, '#8a5c2c');
+      r(right ? x0 + 5 : x0, 10, 2, 1, '#a87844');
+    }
+  };
+  if (dir === 'down') vert(14);
+  else if (dir === 'up') vert(1);
+  else if (dir === 'right') horiz(9, true);
+  else horiz(0, false);
 }
 function drawWindow(x, y, w, h) {
   ctx.fillStyle = 'rgba(4,4,20,0.92)';
@@ -1341,7 +1425,7 @@ function drawBattle() {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath(); ctx.ellipse(SX + SW / 2, SY + 295, 95, 18, 0, 0, Math.PI * 2); ctx.fill();
   const visible = !(battle.enFlash > 0 && tick % 4 < 2) && battle.ehp > 0;
-  if (visible) drawArt(ART[battle.en.art], SX + SW / 2 - 96, SY + 110, 12);
+  if (visible) drawArt(ART[battle.en.art], SX + SW / 2 - 96, SY + 110, 12, battle.en.pal);
   ctx.restore();
 
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;

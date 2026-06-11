@@ -86,6 +86,13 @@ tryDraw('メニュー描画', () => frames(10));
 H.press('KeyX'); frames(5);
 ok(H.getState() === 'field', 'メニューが閉じる');
 
+// ---- 5.5 武器装備時の見た目描画 ----
+console.log('# 武器装備の描画');
+for (const w of ['ひのきのぼう', 'こんぼう', 'どうのつるぎ', null]) {
+  H.hero.weapon = w;
+  tryDraw(`装備 ${w || 'なし'} で描画`, () => frames(10));
+}
+
 // ---- 6. 全種の敵と戦闘(コマンド連打で終局まで) ----
 console.log('# 戦闘テスト');
 for (const name of Object.keys(H.ENEMIES)) {
