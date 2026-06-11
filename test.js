@@ -57,6 +57,8 @@ ok(world[4][7] === 'n', '神の神殿が 西のはて (7,4)');
 ok(world[5][7] === 'G', '神殿の出口 (7,5) が草原');
 ok(world[23][13] === 'v', 'ドラゴンの洞窟が 魔王城の西 (13,23)');
 ok(world[24][13] === 'G', '洞窟の出口 (13,24) が草原');
+ok(world[14][5] === 'y', '霊峰が 左の山奥 (5,14)');
+ok(world[15][5] === 'G' && world[19][5] === 'G', '霊峰へ続く渓谷の道が通行可能');
 
 // ---- 2. 各状態で描画してもエラーが出ない ----
 console.log('# 描画スモークテスト');
@@ -77,7 +79,7 @@ ok(true, '冒頭メッセージ処理');
 tryDraw('町を 30フレーム描画', () => frames(30));
 
 // ---- 4. 各マップへテレポートして描画 ----
-for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'cave', 'ramen', 'world']) {
+for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'cave', 'ramen', 'elder', 'world']) {
   const m = H.MAPS[id];
   let x = 4, y = 3;
   if (id === 'world') { x = 20; y = 9; }
@@ -182,6 +184,16 @@ H.continueGame();
 frames(5); H.press('KeyZ'); frames(10);
 ok(H.player.tx === 11 && H.player.ty === 13, '続きからで記録地点に復帰');
 ok(H.hero.gold === 777, '続きからでステータス復元 (gold=' + H.hero.gold + ')');
+
+// ---- 9.5 竜の長老(蒼竜への進化) ----
+console.log('# 竜の長老テスト');
+if (!H.party.some(m => m.job === 'dragon')) H.party.push(H.makeCompanion('dragon'));
+H.teleport('elder', 4, 2);
+H.player.dir = 'up';
+H.press('KeyZ'); frames(5);  // 長老に話しかける
+for (let i = 0; i < 10; i++) { H.press('KeyZ'); frames(15); }
+ok(H.hero.dragonEvolved === true, 'ドラゴンが伝説の蒼竜に進化');
+tryDraw('蒼竜つきでフィールド描画', () => { H.teleport('town', 9, 11); frames(20); });
 
 // ---- 10. 強くてニューゲーム ----
 console.log('# 強くてニューゲーム');
