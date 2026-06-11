@@ -67,7 +67,8 @@ function initAudio() {
   audio = new (window.AudioContext || window.webkitAudioContext)();
   if (curTrack) playTrack(curTrack);
 }
-function tone(freq, at, dur, type = 'square', vol = 0.05) {
+let bgmNodes = [];
+function tone(freq, at, dur, type = 'square', vol = 0.05, isBgm = false) {
   if (!audio || freq <= 0) return;
   const o = audio.createOscillator(), g = audio.createGain();
   o.type = type; o.frequency.value = freq;
@@ -75,6 +76,17 @@ function tone(freq, at, dur, type = 'square', vol = 0.05) {
   g.gain.exponentialRampToValueAtTime(0.001, at + dur);
   o.connect(g).connect(audio.destination);
   o.start(at); o.stop(at + dur);
+  if (isBgm) {
+    bgmNodes.push(o);
+    o.onended = () => { const i = bgmNodes.indexOf(o); if (i >= 0) bgmNodes.splice(i, 1); };
+  }
+}
+function stopBgmNodes() {  // 予約ずみのBGM音を ぜんぶ止める(重複さいせい防止)
+  for (const o of bgmNodes) {
+    o.onended = null;
+    try { o.stop(); } catch (e) {}
+  }
+  bgmNodes = [];
 }
 function sfx(freq, dur = 0.08, type = 'square', vol = 0.08) {
   if (!audio) return;
@@ -128,6 +140,7 @@ const TRACKS = {
 function playTrack(name) {
   curTrack = name;
   clearTimeout(bgmTimer); bgmTimer = null;
+  stopBgmNodes();
   if (!audio || !bgmOn) return;
   const tr = TRACKS[name];
   const t0 = audio.currentTime + 0.05;
@@ -135,14 +148,14 @@ function playTrack(name) {
   for (const [, b] of tr.mel) total += b * tr.beat;
   let t = t0;
   for (const [n, b] of tr.mel) {
-    if (n) tone(nf(n), t, b * tr.beat * 0.92, 'square', 0.035);
+    if (n) tone(nf(n), t, b * tr.beat * 0.92, 'square', 0.035, true);
     t += b * tr.beat;
   }
   t = t0; let i = 0;
   while (t < t0 + total - 0.01) {
     const [n, b] = tr.bas[i % tr.bas.length];
     const d = Math.min(b * tr.beat, t0 + total - t);
-    if (n) tone(nf(n), t, d * 0.9, 'triangle', 0.06);
+    if (n) tone(nf(n), t, d * 0.9, 'triangle', 0.06, true);
     t += d; i++;
   }
   bgmTimer = setTimeout(() => playTrack(name), total * 1000 - 30);
@@ -151,7 +164,7 @@ function setTrack(name) { if (curTrack !== name) playTrack(name); }
 function toggleBgm() {
   bgmOn = !bgmOn;
   if (bgmOn) playTrack(curTrack || 'title');
-  else { clearTimeout(bgmTimer); bgmTimer = null; }
+  else { clearTimeout(bgmTimer); bgmTimer = null; stopBgmNodes(); }
 }
 /* ================= ドット絵 ================= */
 function drawArt(art, x, y, s, pal) {
@@ -533,6 +546,21 @@ function drawTile(ch, px, py, gx, gy) {
       r(6, 2, 3, 3, '#e0c088'); r(6, 2, 3, 1, '#ffffff'); r(9, 3, 1, 2, '#b08850');
       break;
     }
+    case 's': {  // セーブの まほうじん
+      grass();
+      const c1 = Math.floor(tick / 16) % 2 ? '#9ae8ff' : '#62c8f8';
+      const c2 = '#ffe878';
+      r(5, 1, 6, 1, c1);
+      r(3, 2, 2, 1, c1); r(11, 2, 2, 1, c1);
+      r(2, 3, 1, 2, c1); r(13, 3, 1, 2, c1);
+      r(1, 5, 1, 5, c1); r(14, 5, 1, 5, c1);
+      r(2, 10, 1, 2, c1); r(13, 10, 1, 2, c1);
+      r(3, 12, 2, 1, c1); r(11, 12, 2, 1, c1);
+      r(5, 13, 6, 1, c1);
+      r(7, 4, 2, 2, c2); r(4, 7, 2, 2, c2); r(10, 7, 2, 2, c2); r(7, 10, 2, 2, c2);
+      if (Math.floor(tick / 10) % 2) r(7, 7, 2, 2, '#ffffff');
+      break;
+    }
   }
 }
 /* ================= マップ ================= */
@@ -578,7 +606,7 @@ const MAPS = {
       "TGrrrrrGGPPGGWWWWGGT",
       "TGrrrrrGGPPGGWWWWGGT",
       "TGBmDBBGGPPGGGGGGGGT",
-      "TGGGGGGGGPPGGGGGGGGT",
+      "TGGGGGGGGPPsGGGGGGGT",
       "TTTTTTTTTPPTTTTTTTTT",
     ],
     track: 'town',
@@ -604,6 +632,7 @@ const MAPS = {
       { tx:7, ty:13, dir:'right', wander:false,
         pal:{hair:'#383838',skin:'#e8b878',cloth:'#888898',legs:'#505058'},
         lines:["この さきは ワールドマップだ。",
+               "そこの ひかる まほうじんに のれば\nぼうけんのしょに きろく できるぞ。",
                "とおくへ いくほど つよい まものが でる。\nまずは まちの ちかくで レベルあげだ。",
                "しんでも ゴールドが はんぶんに なるだけだ。\nきがるに いってこい！"] },
     ],
@@ -728,7 +757,7 @@ function isFree(x, y, forNpc) {
   if (entityAt(x, y)) return false;
   if (forNpc) {
     const ch = tileAt(mapId, x, y);
-    if (ch === 'D' || ch === 'A') return false;
+    if (ch === 'D' || ch === 'A' || ch === 's') return false;
     if (map.warps && map.warps[x + ',' + y]) return false;
     if (player.tx === x && player.ty === y) return false;
   }
@@ -899,6 +928,7 @@ function save() {
       lv:hero.lv, exp:hero.exp, gold:hero.gold, hp:hero.hp, mp:hero.mp,
       weapon:hero.weapon, armor:hero.armor, shield:hero.shield, inv:hero.inv,
       party: party.map(m => ({ job:m.job, hp:m.hp, mp:m.mp })),
+      pos: { map:mapId, x:player.tx, y:player.ty },
     }));
   } catch (e) {}
 }
@@ -907,7 +937,8 @@ function loadSave() {
     const d = JSON.parse(localStorage.getItem('hajimari_save'));
     if (!d) return false;
     const pd = d.party || [];
-    delete d.party;
+    const pos = d.pos;
+    delete d.party; delete d.pos;
     Object.assign(hero, d);
     party.length = 0;
     for (const s of pd) {
@@ -917,7 +948,7 @@ function loadSave() {
       m.mp = Math.min(s.mp, maxMpOf(m));
       party.push(m);
     }
-    return true;
+    return (pos && MAPS[pos.map]) ? pos : true;
   } catch (e) { return false; }
 }
 function hasSave() {
@@ -936,8 +967,9 @@ function newGame() {
        "ちちの かたみの ひのきのぼうを\nそうびした！"]);
 }
 function continueGame() {
-  loadSave();
-  teleport('town', 10, 5, 'down');
+  const r = loadSave();
+  if (r && r.map) teleport(r.map, r.x, r.y, 'down');
+  else teleport('town', 10, 5, 'down');
   state = 'field';
   msg(["ぼうけんのしょから さいかい した！"]);
 }
@@ -980,6 +1012,15 @@ function onArrive() {
   if (w) {
     seWarp();
     startFade(() => teleport(w.map, w.x, w.y, w.dir));
+    return;
+  }
+  if (tileAt(mapId, player.tx, player.ty) === 's') {
+    msgC(["まほうじんが あたたかく ひかっている…\nぼうけんのしょに きろく しますか？"], ["きろくする","やめておく"], i => {
+      if (i !== 0) return;
+      save();
+      seSave();
+      msg(["ぼうけんのしょに きろくした！\nつぎは ここから さいかい できる。"]);
+    });
     return;
   }
   if (mapId === 'world') checkEncounter();
@@ -1789,7 +1830,7 @@ loop();
 
 if (typeof globalThis.__TEST_HOOK === 'function') {
   globalThis.__TEST_HOOK({
-    MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion,
+    MAPS, ART, ENEMIES, hero, party, JOBS, makeCompanion, player, save, loadSave, continueGame,
     getState: () => state,
     press: c => { justPressed.add(c); },
     startBattle, teleport, newGame,

@@ -141,5 +141,20 @@ while (H.getState() === 'battle' && guard < 4000) {
 ok(H.getState() !== 'battle', `パーティ戦闘が終局 (${guard}フレーム)`);
 ok(H.party.every(m => m.hp > 0), '仲間が生存している');
 
+// ---- 9. セーブゾーン(まほうじん) ----
+console.log('# セーブゾーンテスト');
+ok(H.MAPS.town.grid[13][11] === 's', '町の入り口ちかくに まほうじん (11,13)');
+H.teleport('town', 11, 13);
+H.hero.gold = 777;
+H.save();
+const sd = JSON.parse(global.localStorage.getItem('hajimari_save'));
+ok(sd.pos && sd.pos.map === 'town' && sd.pos.x === 11 && sd.pos.y === 13, 'セーブに位置が記録される');
+H.teleport('world', 25, 20);
+H.hero.gold = 0;
+H.continueGame();
+frames(5); H.press('KeyZ'); frames(10);
+ok(H.player.tx === 11 && H.player.ty === 13, 'つづきからで記録地点に復帰');
+ok(H.hero.gold === 777, 'つづきからでステータス復元 (gold=' + H.hero.gold + ')');
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} 件失敗`);
 process.exit(failures === 0 ? 0 : 1);
