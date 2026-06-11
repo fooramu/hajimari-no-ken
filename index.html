@@ -23,6 +23,7 @@
 </div>
 <script>
 "use strict";
+const VERSION = '1.15';
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 const T = 48;
@@ -2360,6 +2361,7 @@ function draw() {
   }
   ctx.fillStyle = 'rgba(0,0,0,0.05)';
   for (let y = 0; y < cv.height; y += 4) ctx.fillRect(0, y, cv.width, 1);
+  text('version ' + VERSION, cv.width - 14, cv.height - 26, 15, 'rgba(255,255,255,0.45)', 'right');
 }
 
 /* ================= メインループ ================= */
