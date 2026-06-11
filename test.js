@@ -55,6 +55,8 @@ ok(world[23][20] === 'c', '魔王城が (20,23)');
 ok(world[24][20] === 'G', '魔王城の出口 (20,24) が草原');
 ok(world[4][7] === 'n', '神の神殿が 西のはて (7,4)');
 ok(world[5][7] === 'G', '神殿の出口 (7,5) が草原');
+ok(world[23][13] === 'v', 'ドラゴンの洞窟が 魔王城の西 (13,23)');
+ok(world[24][13] === 'G', '洞窟の出口 (13,24) が草原');
 
 // ---- 2. 各状態で描画してもエラーが出ない ----
 console.log('# 描画スモークテスト');
@@ -75,7 +77,7 @@ ok(true, '冒頭メッセージ処理');
 tryDraw('町を 30フレーム描画', () => frames(30));
 
 // ---- 4. 各マップへテレポートして描画 ----
-for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'world']) {
+for (const id of ['weapon', 'inn', 'item', 'tavern', 'castle', 'temple', 'cave', 'world']) {
   const m = H.MAPS[id];
   let x = 4, y = 3;
   if (id === 'world') { x = 20; y = 9; }
@@ -113,7 +115,9 @@ for (const name of Object.keys(H.ENEMIES)) {
   ok(H.getState() !== 'battle', `${name} 戦が終局 (${guard}フレーム)`);
 }
 ok(H.hero.cleared === true, '魔王討伐でクリアフラグが立つ');
+ok(H.party.some(m => m.job === 'dragon'), 'ドラゴン戦の勝利でドラゴンが仲間に');
 for (let i = 0; i < 5; i++) { H.press('KeyZ'); frames(10); } // クリアメッセージを閉じる
+tryDraw('クリア後の町(パレード+紙吹雪)描画', () => { H.teleport('town', 9, 11); frames(30); });
 
 // ---- 7. 敗北フロー ----
 H.hero.lv = 1; H.hero.hp = 1; H.hero.gold = 100;
@@ -132,6 +136,7 @@ ok(H.hero.hp > 0, '敗北後にHP回復 (hp=' + H.hero.hp + ')');
 // ---- 8. 仲間(ルイーダの酒場) ----
 console.log('# 仲間テスト');
 H.hero.lv = 5;
+H.party.length = 0;  // 戦闘テストで加わったドラゴンをリセット
 H.party.push(H.makeCompanion('warrior'), H.makeCompanion('mage'));
 ok(H.party.length === 2, '戦士と魔法使いが仲間に');
 ok(H.party[0].hp === H.JOBS.warrior.lvt[5].hp, '戦士のHPがレベル表どおり');

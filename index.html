@@ -26,6 +26,19 @@
 const VERSION = '1.15';
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
+
+/* ---- クリア者数カウンター(GitHub Pagesは静的なので外部カウンターAPIを利用) ---- */
+let clearCount = null;
+function syncClearCount(hit) {
+  if (globalThis.__TEST_HOOK) return;  // テスト・スナップショット時は通信しない
+  try {
+    fetch('https://abacus.jasoncameron.dev/' + (hit ? 'hit' : 'get') + '/hajimari-no-ken/clears')
+      .then(r => r.json())
+      .then(d => { if (d && typeof d.value === 'number') clearCount = d.value; })
+      .catch(() => {});
+  } catch (e) {}
+}
+syncClearCount(false);
 const T = 48;
 const U = T / 16;
 let tick = 0;
@@ -446,6 +459,23 @@ const ART = {
     "....K.KKKK.K....",
     "......KSSK......",
     ".....KK..KK....."]},
+  drag: { pal:{K:'#103818',G:'#38a04c',L:'#b8e088',V:'#268040',W:'#ffffff',P:'#102018'}, rows:[
+    "................",
+    "....KK....KK....",
+    "...KGGK..KGGK...",
+    "...KGGGKKGGGK...",
+    "..KGGGGGGGGGGK..",
+    ".KGGWPGGGGWPGGK.",
+    ".KGGGGGGGGGGGGK.",
+    ".KGGKWWWWWWKGGK.",
+    ".KGGGKKKKKKGGGK.",
+    ".KGGLLLLLLLLGGK.",
+    "KVGGLLLLLLLLGGVK",
+    "KVVGLLLLLLLLGVVK",
+    ".KGGLLLLLLLLGGK.",
+    ".KGGGLLLLLLGGGK.",
+    "..KGGK....KGGK..",
+    "..KKKK....KKKK.."]},
   demon: { pal:{K:'#140a18',H:'#e8d8c0',B:'#8a2440',R:'#ff4848',D:'#5e1830',W:'#38204a'}, rows:[
     "..K..........K..",
     ".KHK........KHK.",
@@ -777,6 +807,28 @@ function drawTile(ch, px, py, gx, gy) {
       r(5, 0, 1, 1, '#ffffff'); r(10, 2, 1, 1, '#ffffff');
       break;
     }
+    case 'v': {  // ドラゴンの洞窟(ワールドマップ)
+      grass();
+      for (let i = 0; i < 11; i++) {
+        const w = 4 + i;
+        const x0 = 8 - w / 2;
+        r(x0, 3 + i, w, 1, i < 3 ? '#6a5a52' : (i % 2 ? '#564a44' : '#4c4038'));
+      }
+      r(2, 14, 13, 1, '#3a322c');
+      r(5, 8, 6, 6, '#16100e'); r(4, 10, 8, 4, '#16100e');
+      r(6, 10, 1, 1, '#e84040'); r(9, 10, 1, 1, '#e84040');
+      break;
+    }
+    case 'u': {  // 岩の床(洞窟)
+      r(0, 0, 16, 16, '#564a48');
+      if ((gx + gy) % 2 === 0) r(0, 0, 16, 16, 'rgba(0,0,0,0.07)');
+      for (let i = 0; i < 3; i++) {
+        const sx = Math.floor(rnd(gx, gy, i + 51) * 13), sy = Math.floor(rnd(gx, gy, i + 57) * 13);
+        r(sx, sy, 2, 1, '#463a38'); r(sx + 1, sy + 1, 1, 1, '#6a5a56');
+      }
+      r(0, 15, 16, 1, '#3a302e');
+      break;
+    }
     case 's': {  // セーブの 魔法陣
       grass();
       const c1 = Math.floor(tick / 16) % 2 ? '#9ae8ff' : '#62c8f8';
@@ -815,6 +867,7 @@ function genWorld() {
       if (Math.abs(x - 20) <= 2 && Math.abs(y - 8) <= 2) ch = 'G';
       if (Math.abs(x - 20) <= 1 && Math.abs(y - 23) <= 1) ch = 'G';
       if (Math.abs(x - 7) <= 1 && Math.abs(y - 4) <= 1) ch = 'G';
+      if (Math.abs(x - 13) <= 1 && Math.abs(y - 23) <= 1) ch = 'G';
       s += ch;
     }
     rows.push(s);
@@ -822,6 +875,7 @@ function genWorld() {
   rows[8] = rows[8].slice(0, 20) + 'A' + rows[8].slice(21);
   rows[23] = rows[23].slice(0, 20) + 'c' + rows[23].slice(21);
   rows[4] = rows[4].slice(0, 7) + 'n' + rows[4].slice(8);
+  rows[23] = rows[23].slice(0, 13) + 'v' + rows[23].slice(14);
   return rows;
 }
 
@@ -871,7 +925,39 @@ const MAPS = {
                "遠くへ 行くほど 強い 魔物が でる。\nまずは 町の近くで レベル上げだ。",
                "遥か 西の果ての神殿には\n古き神が 住む。\n３人で 行けば 何かが 起こるという…",
                "遥か 南には 魔王の城が…\n行くなら 仲間と 備えを 忘れるな！",
+               "魔王城の 西の 洞窟には\n竜が 住むという…\n力を 認めた者には 従うとか。",
                "死んでも ゴールドが 半分に なるだけだ。\n気軽に 行ってこい！"] },
+      // ---- クリア後の 感謝のパレード ----
+      { tx:8, ty:6, dir:'right', wander:true, parade:true,
+        pal:{hair:'#a06820',skin:'#f0c890',cloth:'#d04040',legs:'#803030'},
+        lines:["ありがとう！ 勇者様！","あなたは 世界の 救世主だ！"] },
+      { tx:11, ty:6, dir:'left', wander:true, parade:true,
+        pal:{hair:'#604020',skin:'#e8b878',cloth:'#e8a030',legs:'#705020'},
+        lines:["魔王を 倒してくれたんだね！\n本当に ありがとう！"] },
+      { tx:8, ty:8, dir:'right', wander:true, parade:true,
+        pal:{hair:'#803818',skin:'#f0c890',cloth:'#40a0d0',legs:'#305080'},
+        lines:["万歳！ 万歳！ 勇者様 万歳！"] },
+      { tx:11, ty:8, dir:'left', wander:true, parade:true,
+        pal:{hair:'#383838',skin:'#f0d8b8',cloth:'#d06890',legs:'#803050'},
+        lines:["世界に 光が 戻ったわ！\nありがとう 勇者様！"] },
+      { tx:8, ty:10, dir:'right', wander:true, parade:true,
+        pal:{hair:'#c8a030',skin:'#f0c890',cloth:'#48b058',legs:'#306838'},
+        lines:["英雄たちの 凱旋だ！\n今夜は 宴だぞーっ！"] },
+      { tx:12, ty:9, dir:'left', wander:true, parade:true,
+        pal:{hair:'#a06820',skin:'#e8b878',cloth:'#8848d0',legs:'#503080'},
+        lines:["ガロンさんも ミリアさんも\nありがとう！"] },
+      { tx:8, ty:12, dir:'right', wander:true, parade:true,
+        pal:{hair:'#604020',skin:'#f0c890',cloth:'#e87830',legs:'#884820'},
+        lines:["子どもたちも もう 安心して\n外で 遊べるよ。 ありがとう！"] },
+      { tx:11, ty:12, dir:'left', wander:true, parade:true,
+        pal:{hair:'#303030',skin:'#f0d8b8',cloth:'#30b8a8',legs:'#1e6858'},
+        lines:["あんたたちは アルファの…\nいや 世界の 誇りだよ！"] },
+      { tx:7, ty:7, dir:'right', wander:true, parade:true,
+        pal:{hair:'#d04040',skin:'#f0c890',cloth:'#f0c040',legs:'#907020'},
+        lines:["ありがとう！ ありがとう！\n何度でも 言わせて おくれ！"] },
+      { tx:12, ty:11, dir:'left', wander:true, parade:true,
+        pal:{hair:'#5038b8',skin:'#f0d8b8',cloth:'#6a94f0',legs:'#28448a'},
+        lines:["勇者様の 物語を 歌に するわ！\n「はじまりの剣」って いう題で どう？"] },
     ],
   },
   weapon: {
@@ -1003,6 +1089,23 @@ const MAPS = {
         pal:{hair:'#e8e4f0',skin:'#f0d8b8',cloth:'#f0ead8',legs:'#c8c0a8'} },
     ],
   },
+  cave: {
+    grid: [
+      "#########",
+      "#uuuuuuu#",
+      "#uuuuuuu#",
+      "#uuuuuuu#",
+      "#uuuuuuu#",
+      "#uuuuuuu#",
+      "####D####",
+    ],
+    track: 'castle',
+    warps: { "4,6": { map:'world', x:13, y:24, dir:'down' } },
+    npcs: [
+      { tx:4, ty:2, dir:'down', tame:'dragon', sprite:'dragon',
+        pal:{ hair:'#1e6020', skin:'#b8e088', cloth:'#38a04c', legs:'#246838' } },
+    ],
+  },
   world: {
     grid: genWorld(),
     track: 'field',
@@ -1010,6 +1113,7 @@ const MAPS = {
       "20,8":  { map:'town',   x:9, y:13, dir:'up' },
       "20,23": { map:'castle', x:6, y:7,  dir:'up' },
       "7,4":   { map:'temple', x:4, y:5,  dir:'up' },
+      "13,23": { map:'cave',   x:4, y:5,  dir:'up' },
     },
     npcs: [],
   },
@@ -1024,7 +1128,10 @@ const tileAt = (m, x, y) => {
   if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return 'T';
   return g[y][x];
 };
-const npcGone = n => (n.recruit && party.some(m => m.job === n.recruit)) || (n.boss && hero.cleared);
+const npcGone = n => (n.recruit && party.some(m => m.job === n.recruit))
+  || (n.tame && party.some(m => m.job === n.tame))
+  || (n.boss && hero.cleared)
+  || (n.parade && !hero.cleared);  // パレードはクリア後だけ現れる
 function entityAt(x, y) {
   for (const n of map.npcs) if (!npcGone(n) && n.tx === x && n.ty === y) return n;
   return null;
@@ -1102,6 +1209,17 @@ const JOBS = {
     ask:"私は 魔法使いのミリア。\n攻撃魔法と 回復が 得意よ。\n連れていって くれるかしら？",
     no:"そう… 縁が あれば また 会いましょ。",
   },
+  dragon: {
+    name:'ドラゴン', label:'竜', atkBonus:6, defBonus:8, breath:true,
+    gear:'鋭い爪・竜のうろこ',
+    blessedAtk:12, blessedGear:'神炎の爪・竜のうろこ',
+    pal:{ hair:'#1e6020', skin:'#b8e088', cloth:'#38a04c', legs:'#246838' },
+    lvt:[null,
+      {hp:30,mp:0,str:8, agi:6}, {hp:36,mp:0,str:11,agi:8}, {hp:42,mp:0,str:14,agi:10},
+      {hp:48,mp:0,str:18,agi:12},{hp:54,mp:0,str:22,agi:15},{hp:60,mp:0,str:26,agi:17},
+      {hp:66,mp:0,str:31,agi:20},{hp:74,mp:0,str:35,agi:23},{hp:82,mp:0,str:40,agi:26},
+      {hp:90,mp:0,str:45,agi:30}],
+  },
 };
 const party = [];
 const allAllies = () => [hero, ...party];
@@ -1142,7 +1260,9 @@ const ENEMIES = {
   'バンシー':       { hp:14, atk:11, def:6,  agi:7,  exp:8,  gold:16, art:'banshee' },
   'ウィッチ':       { hp:13, atk:10, def:5,  agi:8,  exp:11, gold:22, art:'witch', spell:true },
   'サキュバス':     { hp:24, atk:15, def:10, agi:11, exp:20, gold:40, art:'succubus', breath:true },
-  '魔王':         { hp:150, atk:34, def:18, agi:14, exp:250, gold:500, art:'demon',
+  'ドラゴン':       { hp:90, atk:30, def:16, agi:14, exp:100, gold:200, art:'drag',
+                      breath:true, tame:'dragon' },
+  '魔王':         { hp:220, atk:40, def:22, agi:18, exp:350, gold:800, art:'demon',
                       spell:true, breath:true, boss:true },
 };
 
@@ -1355,6 +1475,10 @@ function interact() {
         () => startBattle(npc.boss, 'castle'));
   } else if (npc.god) {
     godTalk();
+  } else if (npc.tame) {
+    msg(["グルルルル…！",
+         "我が ねぐらに 足を 踏み入れる者よ…\nその力 見せてみよ！"],
+        () => startBattle('ドラゴン', 'castle'));
   } else {
     msg(npc.lines.slice());
   }
@@ -1724,7 +1848,15 @@ function companionsAct(i) {  // 仲間は じどうで 戦う
     msg([`${m.name}は スパークを 唱えた！`, `${battle.name}に ${dmg}の ダメージ！`], next);
     return;
   }
-  if (!j.caster && hero.blessed && Math.random() < 0.35) {  // 雷神の斧 の 必殺
+  if (j.breath && Math.random() < 0.4) {  // ドラゴンの 炎のブレス
+    seSpark(); battle.fx = 14;
+    const base = atkOf(m) - Math.floor(battle.en.def / 2);
+    const dmg = Math.max(3, Math.floor(randInt(Math.floor(base / 4), Math.floor(base / 2)) * 1.6));
+    battle.ehp -= dmg; battle.enFlash = 16;
+    msg([`${m.name}は 炎を 吐いた！`, `${battle.name}を 焼き尽くす！\n${dmg}の ダメージ！`], next);
+    return;
+  }
+  if (!j.caster && !j.breath && hero.blessed && Math.random() < 0.35) {  // 雷神の斧 の 必殺
     seThunder(); battle.bolt = 20;
     const base = atkOf(m) - Math.floor(battle.en.def / 2);
     const dmg = Math.max(2, Math.floor(randInt(Math.floor(base / 4), Math.floor(base / 2)) * 1.8));
@@ -1760,14 +1892,14 @@ function enemyAct() {
   if (en.breath && Math.random() < 0.35) act = 'fire';
   if (act === 'spark') {
     seSpark(); battle.fx = 14;
-    const dmg = en.boss ? randInt(10, 18) : randInt(4, 9);
+    const dmg = en.boss ? randInt(14, 24) : randInt(4, 9);
     t.hp -= dmg; battle.shake = 14; seDamage();
     msg([`${battle.name}は スパークを 唱えた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], () => afterEnemy(t));
     return;
   }
   if (act === 'fire') {
     seSpark(); battle.fx = 14;
-    const dmg = en.boss ? randInt(12, 20) : randInt(6, 11);
+    const dmg = en.boss ? randInt(16, 28) : randInt(6, 11);
     t.hp -= dmg; battle.shake = 14; seDamage();
     msg([`${battle.name}は ${en.boss ? '地獄の炎' : '炎'}を はいた！`, `${t.name}は ${dmg}の ダメージを 受けた！`], () => afterEnemy(t));
     return;
@@ -1804,11 +1936,28 @@ function victory() {
   hero.gold += g;
   hero.exp += battle.en.exp;
   const isBoss = battle.en.boss;
+  const isTame = battle.en.tame;
   msg([`${battle.name}を 倒した！`,
        `経験値 ${battle.en.exp}ポイント 獲得！\n${g}ゴールドを 手に入れた！`],
-      () => levelChain(isBoss ? bossVictory : endBattle));
+      () => levelChain(isBoss ? bossVictory : isTame ? tameVictory : endBattle));
+}
+function tameVictory() {
+  battle = null;
+  state = 'field';
+  noEncUntil = tick + 180;
+  setTrack(map.track);
+  msgC(["ドラゴンは 力を 認めたように\nこちらを 見つめている…",
+        "ドラゴンは 仲間に なりたそうだ！\n仲間に しますか？"],
+       ["仲間にする", "やめておく"], i => {
+    if (i !== 0) { msg(["ドラゴンは ねぐらの 奥へと\n戻っていった…"]); return; }
+    party.push(makeCompanion('dragon'));
+    seLevelUp();
+    msg(["竜の ドラゴンが 仲間に 加わった！",
+         "ドラゴンは 炎のブレスで\n敵を 焼き尽くすぞ！"]);
+  });
 }
 function bossVictory() {
+  if (!hero.cleared) syncClearCount(true);  // 初回クリアをカウント
   hero.cleared = true;
   battle = null;
   state = 'field';
@@ -1817,6 +1966,7 @@ function bossVictory() {
   seVictory();
   msg(["魔王は 滅び 世界に\n光が 戻った！",
        `${hero.name}${party.length ? 'たち' : ''}の 活躍は\n永遠に 語り継がれるだろう…`,
+       "アルファの町では みんなが\n英雄の 帰りを 待っている！",
        "🎉 おめでとう！ 冒険は クリアだ！\n（この後も 自由に 遊べます）"]);
 }
 function levelChain(done) {
@@ -2040,6 +2190,30 @@ function drawChara(e, cam) {
     r(sx - 1, 3, 3, 3, bl ? '#ffd860' : '#50d8f0');
     r(sx, 4, 1, 1, bl ? '#ffffff' : '#d8f8ff');
     if (bl && Math.floor(tick / 9) % 2) r(sx - 1, 2, 1, 1, '#ffffff');
+  } else if (kind === 'dragon') {
+    // つばさ(はばたき)
+    const wy = frame ? 7 : 9;
+    r(0, wy, 4, 6, '#246838'); r(0, wy, 4, 1, '#2f8a48');
+    r(20, wy, 4, 6, '#246838'); r(20, wy, 4, 1, '#2f8a48');
+    // しっぽ
+    r(19, 17, 4, 2, p.cloth); r(22, 15, 2, 2, p.cloth); r(23, 14, 1, 1, '#b8e088');
+    // どう
+    r(5, 11, 14, 8, p.cloth);
+    r(8, 13, 8, 6, p.skin);   // はら
+    r(5, 11, 5, 3, 'rgba(255,255,255,0.15)');
+    legs('#246838', 'rgba(0,0,0,0.35)');
+    // あたま
+    r(6, 2, 12, 8, p.cloth);
+    r(6, 2, 12, 1, '#2f8a48');
+    if (d === 'up') r(7, 4, 10, 4, p.cloth);
+    else {
+      eyes(4, '#ffd040');
+      r(8, 7, 8, 3, p.skin);  // くち
+      r(8, 7, 1, 1, '#ffffff'); r(15, 7, 1, 1, '#ffffff');  // きば
+    }
+    // つの
+    r(4, 0, 2, 3, '#e8d8c0'); r(18, 0, 2, 3, '#e8d8c0');
+    r(4, 0, 2, 1, '#fff8e8'); r(18, 0, 2, 1, '#fff8e8');
   } else if (kind === 'demon') {
     // マント
     r(4, 12, 16, 9, p.cloth);
@@ -2196,7 +2370,9 @@ function drawMenu() {
     ['職業', JOBS[a.job].label], ['ＬＶ', hero.lv],
     ['ＨＰ', a.hp + '/' + maxHpOf(a)], ['ＭＰ', a.mp + '/' + maxMpOf(a)],
     ['攻撃力', atkOf(a)], ['守備力', dfnOf(a)],
-    ['特技', JOBS[a.job].caster ? 'スパーク・ヒール' : 'なし'],
+    ['特技', JOBS[a.job].caster ? (hero.blessed ? 'ライトニング・ヒール' : 'スパーク・ヒール')
+            : JOBS[a.job].breath ? '炎のブレス'
+            : hero.blessed ? '稲妻斬り' : 'なし'],
     ['状態', a.hp > 0 ? '元気' : '戦闘不能'],
   ];
   L.forEach(([k, v], i) => {
@@ -2214,19 +2390,23 @@ function drawMenu() {
   }
 
   if (party.length) {
-    const y3 = y + 444, h3 = party.length * 82 + 48;
+    const slim = party.length >= 3;  // ３人以上は 詰めて表示
+    const mh = slim ? 56 : 82;
+    const y3 = y + 444, h3 = party.length * mh + (slim ? 44 : 48);
     drawWindow(x, y3, w, h3);
     text('仲間', x + 30, y3 + 14, 22, '#ffd860');
     text('←→ 切替', x + w - 40, y3 + 16, 17, '#8ae0ff', 'right');
     party.forEach((m, i) => {
-      const yy = y3 + 44 + i * 82;
+      const yy = y3 + 44 + i * mh;
       const dead = m.hp <= 0;
       if (menu.who === i + 1) text('▶', x + 18, yy, 18, '#ffd860');
-      text(`${m.name}（${JOBS[m.job].label}）`, x + 36, yy, 19, dead ? '#ff8060' : '#ffd860');
-      text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 20, 17,
+      text(`${m.name}（${JOBS[m.job].label}）`, x + 36, yy, slim ? 18 : 19, dead ? '#ff8060' : '#ffd860');
+      text(`ＨＰ ${m.hp}/${maxHpOf(m)}　ＭＰ ${m.mp}/${maxMpOf(m)}`, x + 56, yy + 20, slim ? 16 : 17,
            dead ? '#ff8060' : '#fff');
-      text(`攻撃力 ${atkOf(m)}　守備力 ${dfnOf(m)}`, x + 56, yy + 40, 17);
-      text(`装備 ${gearOf(m)}`, x + 56, yy + 60, 17, '#aac');
+      if (!slim) {
+        text(`攻撃力 ${atkOf(m)}　守備力 ${dfnOf(m)}`, x + 56, yy + 40, 17);
+        text(`装備 ${gearOf(m)}`, x + 56, yy + 60, 17, '#aac');
+      }
     });
   }
 
@@ -2360,16 +2540,20 @@ function drawBattle() {
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.roundRect(SX, SY, SW, SH, 8); ctx.stroke();
 
-  allAllies().forEach((a, i) => {
-    const wy = 28 + i * 132;
-    drawWindow(28, wy, 204, 124);
+  const allies2 = allAllies();
+  const compact = allies2.length > 3;  // ４人時は 窓を 詰める
+  allies2.forEach((a, i) => {
+    const wh = compact ? 92 : 124, sp2 = compact ? 98 : 132;
+    const wy = 28 + i * sp2;
+    drawWindow(28, wy, 204, wh);
     const dead = a.hp <= 0;
-    text(a.name, 52, wy + 16, 20, dead ? '#888' : '#ffd860');
-    text('ＨＰ', 52, wy + 52, 18);
-    text(a.hp + '/' + maxHpOf(a), 204, wy + 52, 18,
+    const fs = compact ? 16 : 18;
+    text(a.name, 52, wy + (compact ? 12 : 16), compact ? 17 : 20, dead ? '#888' : '#ffd860');
+    text('ＨＰ', 52, wy + (compact ? 38 : 52), fs);
+    text(a.hp + '/' + maxHpOf(a), 204, wy + (compact ? 38 : 52), fs,
          dead || a.hp <= maxHpOf(a) / 4 ? '#ff8060' : '#fff', 'right');
-    text('ＭＰ', 52, wy + 86, 18);
-    text(a.mp + '/' + maxMpOf(a), 204, wy + 86, 18, '#fff', 'right');
+    text('ＭＰ', 52, wy + (compact ? 62 : 86), fs);
+    text(a.mp + '/' + maxMpOf(a), 204, wy + (compact ? 62 : 86), fs, '#fff', 'right');
   });
 
   if (battle.mode === 'cmd' || battle.mode === 'spell' || battle.mode === 'item') {
@@ -2445,6 +2629,16 @@ function draw() {
     for (const e of ents) initEnt(e);
     ents.sort((a, b) => a.py - b.py);
     for (const e of ents) drawChara(e, cam);
+    if (hero.cleared && mapId === 'town') {  // 凱旋パレードの紙吹雪
+      const COL = ['#f06060', '#f0c040', '#48b058', '#40a0d0', '#d068d0', '#ffffff'];
+      for (let i = 0; i < 44; i++) {
+        const sp = 1.2 + rnd(i, 3, 9) * 1.8;
+        const yy = ((tick * sp + rnd(i, 5, 11) * 760) % 780) - 30;
+        const xx = rnd(i, 7, 13) * cv.width + Math.sin(tick / 24 + i * 1.7) * 22;
+        ctx.fillStyle = COL[i % COL.length];
+        ctx.fillRect(xx, yy, 5, i % 3 ? 5 : 8);
+      }
+    }
     if (state === 'shop') drawShop();
     if (state === 'menu') drawMenu();
     if (dialog) drawDialog();
@@ -2457,6 +2651,9 @@ function draw() {
   }
   ctx.fillStyle = 'rgba(0,0,0,0.05)';
   for (let y = 0; y < cv.height; y += 4) ctx.fillRect(0, y, cv.width, 1);
+  if (clearCount !== null) {
+    text(`クリア者数 ${clearCount}人`, cv.width - 14, cv.height - 48, 15, 'rgba(255,232,120,0.55)', 'right');
+  }
   text('version ' + VERSION, cv.width - 14, cv.height - 26, 15, 'rgba(255,255,255,0.45)', 'right');
 }
 
