@@ -1000,7 +1000,8 @@ const MAPS = {
         lines:["ガロンさんも ミリアさんも\nありがとう！"] },
       { tx:8, ty:12, dir:'right', wander:true, parade:true,
         pal:{hair:'#604020',skin:'#f0c890',cloth:'#e87830',legs:'#884820'},
-        lines:["子どもたちも もう 安心して\n外で 遊べるよ。 ありがとう！"] },
+        lines:["子どもたちも もう 安心して\n外で 遊べるよ。 ありがとう！",
+               "…と 言いたいところだが 外の魔物が\n黒く 濁った姿に 変わってるんだ…\n何かが まだ 終わってない 気がする…"] },
       { tx:11, ty:12, dir:'left', wander:true, parade:true,
         pal:{hair:'#303030',skin:'#f0d8b8',cloth:'#30b8a8',legs:'#1e6858'},
         lines:["あんたたちは アルファの…\nいや 世界の 誇りだよ！"] },
@@ -1365,6 +1366,30 @@ const ENEMIES = {
   'ゾウユウ':       { hp:400, atk:52, def:30, agi:26, exp:999, gold:2500, art:'zouyu',
                       spell:true, breath:true, trueBoss:true },
 };
+/* 魔王討伐後〜ゾウユウ討伐まで: ゾウユウに書き換えられた「闇の」モンスター */
+function corruptPal(pal) {  // 黒く濁らせて 目を赤く
+  const out = {};
+  for (const k of Object.keys(pal)) {
+    const n = parseInt(pal[k].slice(1), 16);
+    const r = Math.floor(((n >> 16) & 255) * 0.38);
+    const g = Math.floor(((n >> 8) & 255) * 0.26);
+    const b = Math.floor((n & 255) * 0.42 + 22);
+    out[k] = '#' + ((r << 16) | (g << 8) | Math.min(255, b)).toString(16).padStart(6, '0');
+  }
+  if (out.E) out.E = '#ff2020';
+  if (out.P) out.P = '#b02040';
+  return out;
+}
+for (const base of ['ピクシー','ピンクピクシー','キャットガール','アルラウネ','ハーピー','バンシー','ウィッチ','サキュバス']) {
+  const e = ENEMIES[base];
+  ENEMIES['闇の' + base] = {
+    hp: Math.round(e.hp * 2.6), atk: Math.round(e.atk * 1.8),
+    def: e.def + 8, agi: e.agi + 6,
+    exp: e.exp * 5, gold: e.gold * 4,
+    art: e.art, spell: e.spell, breath: e.breath, dark: true,
+    pal: corruptPal(e.pal || ART[e.art].pal),
+  };
+}
 
 /* ================= プレイヤー・状態 ================= */
 const player = { tx:9, ty:11, px:9*T, py:11*T, dir:'up', animT:0, pal: hero.pal };
@@ -1757,6 +1782,8 @@ function checkEncounter() {
   else if (d <= 14) pool = forest ? ['バンシー','ウィッチ','アルラウネ','ハーピー']
                                   : ['ハーピー','ピンクピクシー','バンシー','キャットガール'];
   else              pool = forest ? ['ウィッチ','サキュバス','バンシー'] : ['バンシー','ウィッチ','サキュバス'];
+  // 魔王討伐後は ゾウユウに 書き換えられた「闇の」モンスターが はびこる
+  if (hero.cleared && !hero.trueCleared) pool = pool.map(n => '闇の' + n);
   startBattle(pool[Math.floor(Math.random() * pool.length)], forest ? 'forest' : 'grass');
 }
 
@@ -2873,7 +2900,14 @@ function drawBattle() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(ex, SY + 295, scl * 9, 16, 0, 0, Math.PI * 2); ctx.fill();
     if (!(f.flash > 0 && tick % 4 < 2)) {
-      drawArt(ART[f.en.art], ex - scl * 8, SY + 298 - scl * 16, scl, f.en.pal);
+      // 闇のモンスターは グリッチのように 震える
+      const jx = f.en.dark && Math.floor(tick / 4) % 6 === 0 ? randInt(-5, 5) : 0;
+      drawArt(ART[f.en.art], ex - scl * 8 + jx, SY + 298 - scl * 16, scl, f.en.pal);
+      if (f.en.dark && tick % 30 < 4) {  // 残像
+        ctx.globalAlpha = 0.3;
+        drawArt(ART[f.en.art], ex - scl * 8 + 8, SY + 298 - scl * 16, scl, f.en.pal);
+        ctx.globalAlpha = 1;
+      }
     }
   });
   if (battle.slash > 0) {  // 斬撃エフェクト(ズシャッ)
